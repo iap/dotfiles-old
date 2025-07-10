@@ -1,0 +1,115 @@
+#!/bin/sh
+# Enhanced cross-platform pinentry fallback script with debugging
+# Designed to work reliably in GPG agent context
+# Version: 2.0 - Enhanced for GPG agent compatibility
+
+# Debug logging function
+debug_log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] pinentry-fallback: $*" >> "$HOME/.logs/pinentry-debug.log" 2>/dev/null || true
+}
+
+# Log startup
+debug_log "Script started with args: $*"
+debug_log "PWD: $(pwd)"
+debug_log "USER: ${USER:-unknown}"
+debug_log "HOME: ${HOME:-unknown}"
+debug_log "GPG_TTY: ${GPG_TTY:-unset}"
+debug_log "DISPLAY: ${DISPLAY:-unset}"
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [pinentry-options]
+
+Enhanced cross-platform pinentry fallback script for GPG.
+Automatically selects the best available pinentry program with debugging.
+
+Priority order:
+  1. Terminal-based: pinentry-curses, pinentry-tty
+  2. GUI fallbacks: pinentry-gtk-2, pinentry-gtk, pinentry-qt
+  3. macOS specific: pinentry-mac
+  4. MacPorts paths: /opt/local/bin/pinentry-*
+
+Options:
+  All options are passed through to the selected pinentry program
+  -h, --help    Show this help message
+
+Examples:
+  $(basename "$0")           # Interactive pinentry
+  $(basename "$0") --version  # Show pinentry version
+
+Note: This script is typically called by GPG agent, not directly.
+Debug logs are written to ~/.logs/pinentry-debug.log
+EOF
+}
+
+# Handle help options
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
+# Create logs directory if needed
+mkdir -p "$HOME/.logs" 2>/dev/null || true
+
+# Enhanced pinentry search with debugging
+find_pinentry() {
+    # Terminal-first fallbacks - prefer non-GUI pinentry programs
+    for pinentry_cmd in \
+        pinentry-curses \
+        pinentry-tty \
+        pinentry-gtk-2 \
+        pinentry-gtk \
+        pinentry-qt \
+        pinentry-qt4 \
+        pinentry-mac; do
+        
+        debug_log "Checking for command: $pinentry_cmd"
+        if command -v "$pinentry_cmd" >/dev/null 2>&1; then
+            debug_log "Found pinentry via command: $pinentry_cmd"
+            echo "$pinentry_cmd"
+            return 0
+        fi
+    done
+
+    # MacPorts alternatives (absolute paths)
+    for pinentry_path in \
+        /opt/local/bin/pinentry-curses \
+        /opt/local/bin/pinentry-gtk2 \
+        /opt/local/bin/pinentry-mac \
+        /usr/local/bin/pinentry-curses \
+        /usr/local/bin/pinentry-mac \
+        /usr/bin/pinentry-curses \
+        /usr/bin/pinentry-gtk-2; do
+        
+        debug_log "Checking for path: $pinentry_path"
+        if [ -x "$pinentry_path" ]; then
+            debug_log "Found pinentry via path: $pinentry_path"
+            echo "$pinentry_path"
+            return 0
+        fi
+    done
+
+    debug_log "ERROR: No pinentry program found"
+    return 1
+}
+
+# Find the best pinentry program
+PINENTRY_PROGRAM=$(find_pinentry)
+if [ $? -ne 0 ]; then
+    debug_log "FATAL: No usable pinentry program found"
+    echo "ERROR: No usable pinentry program found" >&2
+    echo "Please install a pinentry program:" >&2
+    echo "  macOS: sudo port install pinentry-mac" >&2
+    echo "  Linux: sudo apt-get install pinentry-gtk2 (or pinentry-curses)" >&2
+    exit 1
+fi
+
+debug_log "Selected pinentry: $PINENTRY_PROGRAM"
+
+# Execute the selected pinentry program
+debug_log "Executing: $PINENTRY_PROGRAM $*"
+exec "$PINENTRY_PROGRAM" "$@"

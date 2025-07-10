@@ -1,0 +1,334 @@
+#!/bin/sh
+# GPG SSH key management script
+# Manages SSH authentication using GPG agent
+
+set -e
+
+usage() {
+  cat << EOF
+Usage: $(basename "$0") [command] [options]
+
+Commands:
+  setup           - Configure GPG agent for SSH authentication
+  add-key         - Add GPG key to SSH agent
+  list-keys       - List GPG keys suitable for SSH
+  ssh-keys        - Show SSH public keys from GPG
+  test            - Test GPG agent SSH functionality
+  status          - Show GPG agent and SSH status
+  restart-agent   - Restart GPG agent
+
+Options:
+  -k KEYID        GPG key ID to use
+  -f              Force operation without confirmation
+
+Examples:
+  $(basename "$0") setup          # Enable GPG agent SSH support
+  $(basename "$0") list-keys      # Show available GPG keys
+  $(basename "$0") add-key -k KEYID  # Add specific key to SSH agent
+  $(basename "$0") ssh-keys       # Export SSH public keys
+  $(basename "$0") test           # Test SSH functionality
+
+Prerequisites:
+  - GPG with authentication-capable key
+  - gpg-agent with enable-ssh-support
+  - SSH client that supports agent
+EOF
+}
+
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/gpg-ssh.log"
+}
+
+check_gpg() {
+  if ! command -v gpg >/dev/null 2>&1; then
+    echo "Error: GPG not found. Install with:" >&2
+    echo "  macOS: sudo port install gnupg2" >&2
+    echo "  Linux: sudo apt-get install gnupg" >&2
+    exit 1
+  fi
+}
+
+check_gpg_agent() {
+  if ! command -v gpg-agent >/dev/null 2>&1; then
+    echo "Error: gpg-agent not found" >&2
+    exit 1
+  fi
+}
+
+setup_gpg_ssh() {
+  log "Setting up GPG agent for SSH authentication"
+  
+  # Check if GPG agent config exists
+  if [ ! -f "$HOME/.gnupg/gpg-agent.conf" ]; then
+    echo "Error: GPG agent configuration not found" >&2
+    echo "Run 'make bootstrap' first to set up GPG configuration" >&2
+    exit 1
+  fi
+  
+  # Check if SSH support is enabled
+  if ! grep -q "enable-ssh-support" "$HOME/.gnupg/gpg-agent.conf"; then
+    echo "Error: SSH support not enabled in gpg-agent.conf" >&2
+    echo "Run 'make bootstrap' to update GPG configuration" >&2
+    exit 1
+  fi
+  
+  # Restart gpg-agent to apply SSH support
+  restart_agent
+  
+  # Set SSH_AUTH_SOCK if not already set
+  if [ -z "$SSH_AUTH_SOCK" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
+    SSH_SOCKET="$(gpgconf --list-dirs agent-ssh-socket 2>/dev/null)"
+    if [ -n "$SSH_SOCKET" ]; then
+      echo "Add this to your shell configuration:"
+      echo "export SSH_AUTH_SOCK=\"$SSH_SOCKET\""
+      echo ""
+      echo "Or restart your shell to apply the updated environment."
+    fi
+  fi
+  
+  log "GPG SSH setup complete"
+  echo "GPG agent is now configured for SSH authentication"
+}
+
+list_gpg_keys() {
+  echo "=== GPG Keys with Authentication Capability ==="
+  echo ""
+  
+  # List secret keys with authentication capability
+  gpg --list-secret-keys --with-keygrip --with-subkey-fingerprints | \
+  awk '
+    BEGIN { in_key = 0; keyid = ""; usage = ""; keygrip = "" }
+    /^sec/ { 
+      in_key = 1
+      keyid = $2
+      usage = ""
+      keygrip = ""
+    }
+    /^ssb/ && in_key {
+      subkey_usage = $2
+      # Extract usage from the key line
+      if (match($0, /\[([SCAE]+)\]/, arr)) {
+        usage = arr[1]
+      }
+    }
+    /Keygrip/ && in_key {
+      keygrip = $3
+    }
+    /^uid/ && in_key {
+      if (usage ~ /A/ || usage ~ /S/) {
+        print "Key ID: " keyid
+        print "Usage: " usage " (A=Authentication, S=Signing, C=Certification, E=Encryption)"
+        print "Keygrip: " keygrip
+        print "UID: " substr($0, 10)
+        print ""
+      }
+    }
+    /^$/ { in_key = 0 }
+  '
+}
+
+add_ssh_key() {
+  local keyid="$1"
+  local force="$2"
+  
+  if [ -z "$keyid" ]; then
+    echo "Available keys:"
+    list_gpg_keys
+    printf "Enter Key ID to add: "
+    read -r keyid
+  fi
+  
+  if [ -z "$keyid" ]; then
+    echo "Error: No key ID specified" >&2
+    return 1
+  fi
+  
+  # Get keygrip for the key
+  keygrip=$(gpg --list-secret-keys --with-keygrip "$keyid" 2>/dev/null | \
+           grep -A1 "ssb" | grep "Keygrip" | head -1 | awk '{print $3}')
+  
+  if [ -z "$keygrip" ]; then
+    echo "Error: Could not find keygrip for key $keyid" >&2
+    return 1
+  fi
+  
+  # Add keygrip to sshcontrol
+  echo "$keygrip" >> "$HOME/.gnupg/sshcontrol"
+  
+  # Remove duplicates
+  sort -u "$HOME/.gnupg/sshcontrol" > "$HOME/.gnupg/sshcontrol.tmp"
+  mv "$HOME/.gnupg/sshcontrol.tmp" "$HOME/.gnupg/sshcontrol"
+  chmod 600 "$HOME/.gnupg/sshcontrol"
+  
+  log "Added GPG key $keyid (keygrip: $keygrip) to SSH agent"
+  echo "GPG key added to SSH agent successfully"
+}
+
+show_ssh_keys() {
+  echo "=== SSH Public Keys from GPG ==="
+  echo ""
+  
+  if [ -z "$SSH_AUTH_SOCK" ]; then
+    echo "Error: SSH_AUTH_SOCK not set. Run 'setup' first." >&2
+    return 1
+  fi
+  
+  # Show SSH keys via ssh-add
+  if ssh-add -L 2>/dev/null; then
+    echo ""
+    echo "These keys are available for SSH authentication."
+    echo "Copy the desired public key to your server's ~/.ssh/authorized_keys"
+  else
+    echo "No SSH keys currently loaded in GPG agent"
+    echo "Run '$(basename "$0") add-key' to add a GPG key"
+  fi
+}
+
+test_ssh_functionality() {
+  log "Testing GPG agent SSH functionality"
+  
+  echo "=== GPG Agent SSH Test ==="
+  echo ""
+  
+  # Check if SSH_AUTH_SOCK is set
+  if [ -z "$SSH_AUTH_SOCK" ]; then
+    echo "❌ SSH_AUTH_SOCK not set"
+    echo "   Run: $(basename "$0") setup"
+    return 1
+  else
+    echo "✅ SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
+  fi
+  
+  # Check if socket exists
+  if [ ! -S "$SSH_AUTH_SOCK" ]; then
+    echo "❌ SSH agent socket not found"
+    echo "   Run: $(basename "$0") restart-agent"
+    return 1
+  else
+    echo "✅ SSH agent socket exists"
+  fi
+  
+  # Test ssh-add
+  if ssh-add -l >/dev/null 2>&1; then
+    echo "✅ SSH agent responding"
+    echo ""
+    echo "Loaded SSH keys:"
+    ssh-add -l
+  else
+    echo "❌ SSH agent not responding or no keys loaded"
+    echo "   Run: $(basename "$0") add-key"
+    return 1
+  fi
+  
+  echo ""
+  echo "GPG agent SSH functionality test completed"
+}
+
+show_status() {
+  echo "=== GPG Agent and SSH Status ==="
+  echo ""
+  
+  # GPG agent status
+  echo "GPG Agent:"
+  if pgrep gpg-agent >/dev/null; then
+    echo "  Status: Running (PID: $(pgrep gpg-agent))"
+  else
+    echo "  Status: Not running"
+  fi
+  
+  # SSH support status
+  echo "  SSH Support: $(grep -q "enable-ssh-support" "$HOME/.gnupg/gpg-agent.conf" 2>/dev/null && echo "Enabled" || echo "Disabled")"
+  
+  # SSH_AUTH_SOCK
+  echo ""
+  echo "SSH Authentication:"
+  echo "  SSH_AUTH_SOCK: ${SSH_AUTH_SOCK:-Not set}"
+  
+  if [ -n "$SSH_AUTH_SOCK" ] && [ -S "$SSH_AUTH_SOCK" ]; then
+    echo "  Socket Status: Active"
+    echo "  Loaded Keys: $(ssh-add -l 2>/dev/null | wc -l | tr -d ' ')"
+  else
+    echo "  Socket Status: Inactive"
+  fi
+}
+
+restart_agent() {
+  log "Restarting GPG agent"
+  
+  # Kill existing agent
+  gpgconf --kill gpg-agent 2>/dev/null || true
+  
+  # Start new agent
+  gpg-agent --daemon --enable-ssh-support >/dev/null 2>&1 || true
+  
+  # Wait a moment for agent to start
+  sleep 2
+  
+  log "GPG agent restarted"
+  echo "GPG agent restarted successfully"
+}
+
+# Parse command line
+COMMAND=""
+KEYID=""
+FORCE=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    setup|add-key|list-keys|ssh-keys|test|status|restart-agent)
+      COMMAND="$1"
+      shift
+      ;;
+    -k) KEYID="$2"; shift 2 ;;
+    -f) FORCE=1; shift ;;
+    --help) usage; exit 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    *) 
+      if [ -z "$COMMAND" ]; then
+        COMMAND="$1"
+      else
+        echo "Unknown argument: $1" >&2
+        usage
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+
+# Check prerequisites
+check_gpg
+check_gpg_agent
+
+# Execute command
+case "$COMMAND" in
+  setup)
+    setup_gpg_ssh
+    ;;
+  add-key)
+    add_ssh_key "$KEYID" "$FORCE"
+    ;;
+  list-keys)
+    list_gpg_keys
+    ;;
+  ssh-keys)
+    show_ssh_keys
+    ;;
+  test)
+    test_ssh_functionality
+    ;;
+  status)
+    show_status
+    ;;
+  restart-agent)
+    restart_agent
+    ;;
+  ""|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $COMMAND" >&2
+    usage
+    exit 1
+    ;;
+esac

@@ -1,0 +1,37 @@
+#!/bin/sh
+# Local POSIX shell profile overrides
+# Copy this file to ~/.profile.local and customize
+# This file is sourced by ~/.profile for all POSIX-compatible shells
+
+# Example: Override default shell behavior
+# export EDITOR=nano               # Set preferred editor
+# export PAGER=less                # Set preferred pager
+# export BROWSER=firefox           # Set preferred browser
+
+# Example: Custom PATH additions
+# export PATH="$HOME/local/bin:$PATH"     # Add local bin directory
+# export PATH="$PATH:/opt/local/bin"      # Add MacPorts (if not in default.sh)
+
+# Example: Application-specific environment variables
+# export JAVA_HOME="/opt/local/Library/Java/JavaVirtualMachines/openjdk11/Contents/Home"
+# export GOPATH="$HOME/go"
+# export RUSTUP_HOME="$HOME/.rustup"
+# export CARGO_HOME="$HOME/.cargo"
+
+# Example: Development environment settings
+# export NODE_ENV=development
+# export RAILS_ENV=development
+# export PYTHONPATH="$HOME/lib/python"
+
+# Example: Locale and language settings
+# export LANG=en_US.UTF-8
+# export LC_ALL=en_US.UTF-8
+
+# Example: SSH agent settings (if not using GPG)
+# if [ -z "$SSH_AUTH_SOCK" ]; then
+#   eval "$(ssh-agent -s)" >/dev/null 2>&1
+# fi
+
+# NOTE: Keep this file POSIX-compatible (#!/bin/sh)
+# For shell-specific settings, use ~/.bashrc.local or ~/.zshrc.local
+# For interactive-only settings, use the shell.d/env.sh override system

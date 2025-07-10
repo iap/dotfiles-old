@@ -1,0 +1,11 @@
+# Local configuration files (never commit)
+# Exclude .local files but keep templates
+*.local
+!template/
+!template/*.local
+
+# System junk
+.DS_Store
+
+# Logs
+*.log

@@ -1,0 +1,71 @@
+# System junk
+.DS_Store
+Thumbs.db
+
+# Logs and caches
+*.log
+.cache/
+logs/
+
+# Backup
+.backup/
+*.bak
+*.swp
+
+# Secrets
+*.env
+*.local
+*.key
+*.pem
+.gnupg/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Rust
+target/
+Cargo.lock
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

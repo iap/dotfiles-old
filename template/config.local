@@ -1,0 +1,154 @@
+# SSH local configuration template
+# Copy this file to ~/.ssh/config.local and customize with your hosts
+# This file is automatically included by the main SSH config
+# Configuration order matters: more specific hosts should come first
+
+# === PLATFORM-SPECIFIC SETTINGS ===
+# Uncomment the section for your platform
+
+# macOS-specific settings (recommended for macOS)
+# Host *
+#     AddKeysToAgent yes
+#     UseKeychain yes
+#     # Enhanced crypto for modern macOS
+#     PubkeyAcceptedAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+#     HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+#     KexAlgorithms curve25519-sha256@libssh.org,curve25519-sha256,diffie-hellman-group16-sha512
+
+# Linux-specific settings
+# Host *
+#     AddKeysToAgent yes
+#     # Basic settings for most Linux distributions
+
+# Older systems compatibility
+# Host *
+#     # For systems with older OpenSSH (< 7.0)
+#     PubkeyAcceptedAlgorithms ssh-rsa,ssh-dss
+#     HostKeyAlgorithms ssh-rsa,ssh-dss
+#     KexAlgorithms diffie-hellman-group14-sha1,diffie-hellman-group1-sha1
+#     Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+
+# === PORT OVERRIDES ===
+# Override default port 22 for specific scenarios
+
+# High-security environments using non-standard ports
+# Host *.company.com
+#     Port 2222
+#     # Enhanced security for corporate networks
+#     StrictHostKeyChecking yes
+#     VisualHostKey yes
+
+# Servers behind firewalls (use HTTPS port)
+# Host firewall-server.example.com
+#     Port 443
+#     # For networks that only allow HTTP/HTTPS
+
+# === GIT PROVIDERS ===
+# Uncomment and customize the git providers you use
+# Note: With GPG SSH auth, IdentityFile lines are optional
+
+# Host github.com
+#     User git
+#     # Git operation optimizations
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-git@%h:%p
+#     ControlPersist 10m
+#     ServerAliveInterval 30
+#     Compression yes
+#     # Uncomment if using specific SSH key instead of GPG:
+#     # IdentitiesOnly yes
+#     # IdentityFile ~/.ssh/id_ed25519_github
+
+# Host gitlab.com
+#     User git
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-git@%h:%p
+#     ControlPersist 10m
+#     ServerAliveInterval 30
+#     Compression yes
+
+# Host codeberg.org
+#     User git
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-git@%h:%p
+#     ControlPersist 10m
+#     ServerAliveInterval 30
+#     Compression yes
+
+# Host bitbucket.org
+#     User git
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-git@%h:%p
+#     ControlPersist 10m
+
+# === PERSONAL/WORK SERVERS ===
+# Customize these for your specific environment
+
+# Host myserver
+#     HostName server.example.tld
+#     User username
+#     # Connection optimization for frequent use
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 10m
+#     ServerAliveInterval 60
+#     # Security: use specific key if needed
+#     # IdentitiesOnly yes
+#     # IdentityFile ~/.ssh/id_ed25519_server
+
+# Host jumpbox
+#     HostName jump.example.tld
+#     User admin
+#     Port 2222
+#     # Jumpbox optimization
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 30m
+#     # Security for jump host
+#     ForwardAgent no
+#     # IdentityFile ~/.ssh/id_ed25519_jump
+
+# Host internal
+#     HostName internal.example.tld
+#     User developer
+#     ProxyJump jumpbox
+#     # Internal server through jumpbox
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 10m
+#     # IdentityFile ~/.ssh/id_ed25519_internal
+
+# Host backup-server
+#     HostName backup.example.tld
+#     User backup
+#     Port 443                           # Non-standard port for security
+#     # Backup operations optimization
+#     Compression yes
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 60m                 # Longer for big transfers
+#     ServerAliveInterval 30
+#     # IdentityFile ~/.ssh/id_ed25519_backup
+
+# === DEVELOPMENT SHORTCUTS ===
+# Quick access to common development environments
+
+# Host dev
+#     HostName dev.example.tld
+#     User developer
+#     # Development convenience
+#     ForwardAgent yes                   # OK for trusted dev environment
+#     RemoteForward 5432 localhost:5432  # Database tunnel
+#     LocalForward 8080 localhost:80     # Web server tunnel
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 60m
+
+# Host staging
+#     HostName staging.example.tld
+#     User deploy
+#     # Staging environment
+#     StrictHostKeyChecking yes         # Production-like security
+#     ControlMaster auto
+#     ControlPath ~/.ssh/control-%r@%h:%p
+#     ControlPersist 10m

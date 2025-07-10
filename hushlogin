@@ -1,0 +1,17 @@
+# Hush login configuration
+# Suppresses login messages and system information
+# 
+# This file's presence tells the system to skip displaying:
+# - Last login information
+# - System messages (/etc/motd)
+# - Mail notifications
+# - Other login banners
+#
+# Benefits:
+# - Cleaner terminal startup
+# - Faster login process
+# - Reduced noise for automated scripts
+# - Professional appearance for demonstrations
+#
+# Note: This file only needs to exist - content is ignored
+# The system checks for ~/.hushlogin and suppresses messages if found

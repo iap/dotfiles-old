@@ -1,0 +1,475 @@
+#!/bin/sh
+# Git provider management script
+# Manages dotfiles across multiple Git providers
+
+set -e
+
+# Default providers configuration
+PROVIDERS_CONFIG="$HOME/.config/git-providers.conf"
+# Resolve script location even if called through symlink
+SCRIPT_PATH="$0"
+if [ -L "$SCRIPT_PATH" ]; then
+  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH")"
+fi
+DOTFILES_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+
+usage() {
+  cat << EOF
+Usage: $(basename "$0") [command] [options]
+
+Commands:
+  setup           - Configure multiple Git providers
+  add-remote      - Add a new Git provider remote
+  push-all        - Push to all configured providers
+  pull-primary    - Pull from primary provider
+  sync            - Sync across all providers
+  status          - Show status of all remotes
+  list            - List configured providers
+  set-primary     - Set primary provider
+
+Options:
+  -p PROVIDER     Provider name (github, gitlab, bitbucket, gitea, custom)
+  -u URL          Git repository URL
+  -n NAME         Remote name
+  -k KEYFILE      SSH key file for this provider
+  --primary       Set as primary provider
+
+Examples:
+  $(basename "$0") setup
+  $(basename "$0") add-remote -p github -u git@github.com:user/dotfiles.git
+  $(basename "$0") add-remote -p gitlab -u git@gitlab.com:user/dotfiles.git
+  $(basename "$0") push-all
+  $(basename "$0") sync
+
+Supported providers:
+  github      - GitHub (github.com)
+  gitlab      - GitLab (gitlab.com)
+  bitbucket   - Bitbucket (bitbucket.org)
+  gitea       - Gitea (self-hosted)
+  codeberg    - Codeberg (codeberg.org)
+  custom      - Custom Git provider
+EOF
+}
+
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/git-provider.log"
+}
+
+load_providers_config() {
+  if [ -f "$PROVIDERS_CONFIG" ]; then
+    . "$PROVIDERS_CONFIG"
+  else
+    # Default empty config
+    PRIMARY_PROVIDER=""
+    PROVIDERS=""
+  fi
+}
+
+save_providers_config() {
+  mkdir -p "$(dirname "$PROVIDERS_CONFIG")"
+  cat > "$PROVIDERS_CONFIG" << EOF
+# Git providers configuration
+# This file is automatically managed by git-provider
+
+PRIMARY_PROVIDER="$PRIMARY_PROVIDER"
+PROVIDERS="$PROVIDERS"
+
+EOF
+
+  # Save individual provider configs
+  for provider in $PROVIDERS; do
+    eval "url=\$${provider}_URL"
+    eval "key=\$${provider}_KEY"
+    eval "branch=\$${provider}_BRANCH"
+    cat >> "$PROVIDERS_CONFIG" << EOF
+${provider}_URL="$url"
+${provider}_KEY="$key"
+${provider}_BRANCH="${branch:-main}"
+
+EOF
+  done
+  
+  chmod 600 "$PROVIDERS_CONFIG"
+  log "Providers configuration saved"
+}
+
+get_provider_url_template() {
+  local provider="$1"
+  local username="$2"
+  local repo="$3"
+  
+  case "$provider" in
+    github)
+      echo "git@github.com:$username/$repo.git"
+      ;;
+    gitlab)
+      echo "git@gitlab.com:$username/$repo.git"
+      ;;
+    bitbucket)
+      echo "git@bitbucket.org:$username/$repo.git"
+      ;;
+    codeberg)
+      echo "git@codeberg.org:$username/$repo.git"
+      ;;
+    gitea)
+      printf "Enter Gitea server hostname: "
+      read -r gitea_host
+      echo "git@$gitea_host:$username/$repo.git"
+      ;;
+    custom)
+      printf "Enter custom Git URL: "
+      read -r custom_url
+      echo "$custom_url"
+      ;;
+    *)
+      echo "Unknown provider: $provider" >&2
+      return 1
+      ;;
+  esac
+}
+
+setup_providers() {
+  log "Setting up Git provider configuration"
+  
+  cd "$DOTFILES_DIR" || { echo "Error: $DOTFILES_DIR not found" >&2; exit 1; }
+  
+  echo "=== Multi-Provider Git Setup ==="
+  echo ""
+  
+  printf "Enter your username (for URL generation): "
+  read -r git_username
+  
+  printf "Enter repository name [dotfiles]: "
+  read -r repo_name
+  repo_name="${repo_name:-dotfiles}"
+  
+  echo ""
+  echo "Available providers:"
+  echo "1. GitHub"
+  echo "2. GitLab" 
+  echo "3. Bitbucket"
+  echo "4. Codeberg"
+  echo "5. Gitea (self-hosted)"
+  echo "6. Custom"
+  echo ""
+  
+  providers_to_add=""
+  
+  while true; do
+    printf "Select provider to add (1-6, or 'done' to finish): "
+    read -r choice
+    
+    case "$choice" in
+      1) provider="github" ;;
+      2) provider="gitlab" ;;
+      3) provider="bitbucket" ;;
+      4) provider="codeberg" ;;
+      5) provider="gitea" ;;
+      6) provider="custom" ;;
+      done) break ;;
+      *) echo "Invalid choice"; continue ;;
+    esac
+    
+    echo "Setting up $provider..."
+    
+    # Get URL
+    url=$(get_provider_url_template "$provider" "$git_username" "$repo_name")
+    
+    # Get SSH key (optional)
+    printf "SSH key file for $provider (optional, press Enter to skip): "
+    read -r ssh_key
+    
+    # Add remote
+    git remote add "$provider" "$url" 2>/dev/null || {
+      echo "Remote $provider already exists, updating URL..."
+      git remote set-url "$provider" "$url"
+    }
+    
+    # Store in config
+    eval "${provider}_URL=\"$url\""
+    eval "${provider}_KEY=\"$ssh_key\""
+    eval "${provider}_BRANCH=\"main\""
+    
+    if [ -z "$providers_to_add" ]; then
+      providers_to_add="$provider"
+    else
+      providers_to_add="$providers_to_add $provider"
+    fi
+    
+    echo "✓ Added $provider: $url"
+    echo ""
+  done
+  
+  # Set primary provider
+  if [ -n "$providers_to_add" ]; then
+    echo "Select primary provider:"
+    i=1
+    for p in $providers_to_add; do
+      echo "$i. $p"
+      i=$((i + 1))
+    done
+    
+    printf "Primary provider (1-$((i-1))): "
+    read -r primary_choice
+    
+    j=1
+    for p in $providers_to_add; do
+      if [ "$j" -eq "$primary_choice" ]; then
+        PRIMARY_PROVIDER="$p"
+        break
+      fi
+      j=$((j + 1))
+    done
+    
+    PROVIDERS="$providers_to_add"
+    save_providers_config
+    
+    log "Setup complete. Primary provider: $PRIMARY_PROVIDER"
+    log "Configured providers: $PROVIDERS"
+  fi
+}
+
+add_remote() {
+  local provider="$1"
+  local url="$2"
+  local ssh_key="$3"
+  
+  if [ -z "$provider" ] || [ -z "$url" ]; then
+    echo "Error: Provider and URL required" >&2
+    return 1
+  fi
+  
+  cd "$DOTFILES_DIR" || { echo "Error: $DOTFILES_DIR not found" >&2; exit 1; }
+  
+  # Add remote
+  git remote add "$provider" "$url" 2>/dev/null || {
+    echo "Remote $provider already exists, updating URL..."
+    git remote set-url "$provider" "$url"
+  }
+  
+  # Load existing config
+  load_providers_config
+  
+  # Update config
+  eval "${provider}_URL=\"$url\""
+  eval "${provider}_KEY=\"$ssh_key\""
+  eval "${provider}_BRANCH=\"main\""
+  
+  # Add to providers list if not already there
+  if ! echo "$PROVIDERS" | grep -q "$provider"; then
+    if [ -z "$PROVIDERS" ]; then
+      PROVIDERS="$provider"
+    else
+      PROVIDERS="$PROVIDERS $provider"
+    fi
+  fi
+  
+  # Set as primary if it's the first one
+  if [ -z "$PRIMARY_PROVIDER" ]; then
+    PRIMARY_PROVIDER="$provider"
+  fi
+  
+  save_providers_config
+  log "Added remote: $provider -> $url"
+}
+
+push_all() {
+  load_providers_config
+  
+  if [ -z "$PROVIDERS" ]; then
+    echo "No providers configured. Run 'setup' first." >&2
+    return 1
+  fi
+  
+  cd "$DOTFILES_DIR" || { echo "Error: $DOTFILES_DIR not found" >&2; exit 1; }
+  
+  log "Pushing to all providers..."
+  
+  for provider in $PROVIDERS; do
+    eval "branch=\$${provider}_BRANCH"
+    eval "key=\$${provider}_KEY"
+    
+    echo "Pushing to $provider..."
+    
+    # Use specific SSH key if configured
+    if [ -n "$key" ] && [ -f "$key" ]; then
+      GIT_SSH_COMMAND="ssh -i $key" git push "$provider" "${branch:-main}" || {
+        echo "Warning: Failed to push to $provider" >&2
+      }
+    else
+      git push "$provider" "${branch:-main}" || {
+        echo "Warning: Failed to push to $provider" >&2
+      }
+    fi
+  done
+  
+  log "Push to all providers completed"
+}
+
+pull_primary() {
+  load_providers_config
+  
+  if [ -z "$PRIMARY_PROVIDER" ]; then
+    echo "No primary provider configured" >&2
+    return 1
+  fi
+  
+  cd "$DOTFILES_DIR" || { echo "Error: $DOTFILES_DIR not found" >&2; exit 1; }
+  
+  eval "branch=\$${PRIMARY_PROVIDER}_BRANCH"
+  eval "key=\$${PRIMARY_PROVIDER}_KEY"
+  
+  log "Pulling from primary provider: $PRIMARY_PROVIDER"
+  
+  # Use specific SSH key if configured
+  if [ -n "$key" ] && [ -f "$key" ]; then
+    GIT_SSH_COMMAND="ssh -i $key" git pull "$PRIMARY_PROVIDER" "${branch:-main}"
+  else
+    git pull "$PRIMARY_PROVIDER" "${branch:-main}"
+  fi
+}
+
+sync_all() {
+  log "Syncing across all providers..."
+  pull_primary
+  push_all
+  log "Sync completed"
+}
+
+show_status() {
+  load_providers_config
+  
+  echo "=== Git Multi-Provider Status ==="
+  echo ""
+  echo "Primary provider: ${PRIMARY_PROVIDER:-None}"
+  echo "Configured providers: ${PROVIDERS:-None}"
+  echo ""
+  
+  if [ -n "$PROVIDERS" ]; then
+    cd "$DOTFILES_DIR" || { echo "Error: $DOTFILES_DIR not found" >&2; exit 1; }
+    
+    for provider in $PROVIDERS; do
+      eval "url=\$${provider}_URL"
+      eval "key=\$${provider}_KEY"
+      
+      echo "Provider: $provider"
+      echo "  URL: $url"
+      echo "  SSH Key: ${key:-default}"
+      echo "  Status: $(git ls-remote --heads "$provider" 2>/dev/null | wc -l | tr -d ' ') branches"
+      echo ""
+    done
+  fi
+}
+
+list_providers() {
+  load_providers_config
+  
+  if [ -z "$PROVIDERS" ]; then
+    echo "No providers configured"
+    return
+  fi
+  
+  for provider in $PROVIDERS; do
+    if [ "$provider" = "$PRIMARY_PROVIDER" ]; then
+      echo "$provider (primary)"
+    else
+      echo "$provider"
+    fi
+  done
+}
+
+set_primary() {
+  local new_primary="$1"
+  
+  load_providers_config
+  
+  if ! echo "$PROVIDERS" | grep -q "$new_primary"; then
+    echo "Error: Provider '$new_primary' not configured" >&2
+    return 1
+  fi
+  
+  PRIMARY_PROVIDER="$new_primary"
+  save_providers_config
+  log "Primary provider set to: $new_primary"
+}
+
+# Parse command line
+COMMAND=""
+PROVIDER=""
+URL=""
+SSH_KEY=""
+REMOTE_NAME=""
+SET_PRIMARY=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    setup|add-remote|push-all|pull-primary|sync|status|list|set-primary|help)
+      COMMAND="$1"
+      shift
+      ;;
+    -p) PROVIDER="$2"; shift 2 ;;
+    -u) URL="$2"; shift 2 ;;
+    -n) REMOTE_NAME="$2"; shift 2 ;;
+    -k) SSH_KEY="$2"; shift 2 ;;
+    --primary) SET_PRIMARY=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    *) 
+      if [ -z "$COMMAND" ]; then
+        COMMAND="$1"
+      else
+        echo "Unknown argument: $1" >&2
+        usage
+        exit 1
+      fi
+      shift
+      ;;
+  esac
+done
+
+# Execute command
+case "$COMMAND" in
+  setup)
+    setup_providers
+    ;;
+  add-remote)
+    if [ -z "$PROVIDER" ] || [ -z "$URL" ]; then
+      echo "Error: add-remote requires -p PROVIDER and -u URL" >&2
+      exit 1
+    fi
+    add_remote "$PROVIDER" "$URL" "$SSH_KEY"
+    if [ "$SET_PRIMARY" -eq 1 ]; then
+      set_primary "$PROVIDER"
+    fi
+    ;;
+  push-all)
+    push_all
+    ;;
+  pull-primary)
+    pull_primary
+    ;;
+  sync)
+    sync_all
+    ;;
+  status)
+    show_status
+    ;;
+  list)
+    list_providers
+    ;;
+  set-primary)
+    if [ -z "$PROVIDER" ]; then
+      echo "Error: set-primary requires -p PROVIDER" >&2
+      exit 1
+    fi
+    set_primary "$PROVIDER"
+    ;;
+  help|""|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $COMMAND" >&2
+    usage
+    exit 1
+    ;;
+esac

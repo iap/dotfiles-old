@@ -1,0 +1,128 @@
+#!/bin/sh
+# SSH key generation script with secure defaults
+# Generates Ed25519 keys with proper security settings
+
+set -e
+
+# Default values
+KEY_TYPE="ed25519"
+KEY_SIZE=""
+COMMENT=""
+PASSPHRASE_PROMPT=1
+
+usage() {
+  cat << EOF
+Usage: $(basename "$0") [-t type] [-b bits] [-C comment] [-f filename] [-n]
+  
+  -t type     Key type (ed25519, rsa, ecdsa) [default: ed25519]
+  -b bits     Key size (only for RSA, min 4096) [default: 4096]
+  -C comment  Comment for the key [default: user@device-$(date +%Y%m%d)]
+  -f filename Output filename [default: ~/.ssh/id_\$type]
+  -n          No passphrase (not recommended)
+  -h          Show this help
+
+Recommended key types:
+  ed25519     - Best choice for new keys (modern, fast, secure)
+  rsa         - Compatible with older systems (use 4096 bits minimum)
+  ecdsa       - Good performance but less widespread than ed25519
+
+Examples:
+  $(basename "$0")                              # Generate Ed25519 key
+  $(basename "$0") -t rsa -b 4096              # Generate 4096-bit RSA key
+  $(basename "$0") -C "work-key-$(date +%Y)"   # Custom comment
+EOF
+}
+
+# Parse command line options
+while getopts "t:b:C:f:nh" opt; do
+  case $opt in
+    t) KEY_TYPE="$OPTARG" ;;
+    b) KEY_SIZE="$OPTARG" ;;
+    C) COMMENT="$OPTARG" ;;
+    f) FILENAME="$OPTARG" ;;
+    n) PASSPHRASE_PROMPT=0 ;;
+    h) usage; exit 0 ;;
+    *) usage; exit 1 ;;
+  esac
+done
+
+# Validate key type
+case "$KEY_TYPE" in
+  ed25519|rsa|ecdsa) ;;
+  *) echo "Error: Unsupported key type '$KEY_TYPE'" >&2; exit 1 ;;
+esac
+
+# Set key size for RSA
+if [ "$KEY_TYPE" = "rsa" ]; then
+  if [ -z "$KEY_SIZE" ]; then
+    KEY_SIZE=4096
+  elif [ "$KEY_SIZE" -lt 4096 ]; then
+    echo "Error: RSA key size must be at least 4096 bits" >&2
+    exit 1
+  fi
+fi
+
+# Set default comment
+if [ -z "$COMMENT" ]; then
+  COMMENT="user@device-$(date +%Y%m%d)"
+fi
+
+# Set default filename
+if [ -z "$FILENAME" ]; then
+  FILENAME="$HOME/.ssh/id_$KEY_TYPE"
+fi
+
+# Ensure .ssh directory exists with proper permissions
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+
+# Check if key already exists
+if [ -f "$FILENAME" ]; then
+  echo "Warning: Key file '$FILENAME' already exists"
+  printf "Overwrite? [y/N]: "
+  read -r response
+  case "$response" in
+    [yY][eE][sS]|[yY]) ;;
+    *) echo "Aborted"; exit 1 ;;
+  esac
+fi
+
+# Build ssh-keygen command
+SSH_KEYGEN_CMD="ssh-keygen -t $KEY_TYPE"
+
+if [ "$KEY_TYPE" = "rsa" ]; then
+  SSH_KEYGEN_CMD="$SSH_KEYGEN_CMD -b $KEY_SIZE"
+fi
+
+SSH_KEYGEN_CMD="$SSH_KEYGEN_CMD -C \"$COMMENT\" -f \"$FILENAME\""
+
+if [ "$PASSPHRASE_PROMPT" -eq 0 ]; then
+  SSH_KEYGEN_CMD="$SSH_KEYGEN_CMD -N \"\""
+  echo "Warning: Generating key without passphrase (not recommended for security)"
+fi
+
+# Generate the key
+echo "Generating $KEY_TYPE SSH key..."
+echo "Command: $SSH_KEYGEN_CMD"
+eval "$SSH_KEYGEN_CMD"
+
+# Set proper permissions
+chmod 600 "$FILENAME"
+chmod 644 "$FILENAME.pub"
+
+echo ""
+echo "SSH key generated successfully:"
+echo "  Private key: $FILENAME"
+echo "  Public key:  $FILENAME.pub"
+echo "  Key type:    $KEY_TYPE"
+if [ "$KEY_TYPE" = "rsa" ]; then
+  echo "  Key size:    $KEY_SIZE bits"
+fi
+echo "  Comment:     $COMMENT"
+echo ""
+echo "To add this key to ssh-agent:"
+echo "  ssh-add \"$FILENAME\""
+echo ""
+echo "To copy the public key:"
+echo "  pbcopy < \"$FILENAME.pub\"  # macOS"
+echo "  xclip -sel clip < \"$FILENAME.pub\"  # Linux"

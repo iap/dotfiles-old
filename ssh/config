@@ -1,0 +1,73 @@
+# SSH client configuration
+# Essential cross-platform defaults with local overrides
+# Compatible with older SSH versions and multiple platforms
+#
+# Include local configuration first (specific hosts, platform settings, etc.)
+Include config.local
+#
+# STRATEGY:
+# - Essential defaults here for maximum compatibility
+# - Platform-specific settings in config.local
+# - Host-specific settings in config.local
+# - Ports and crypto can be overridden per host
+#
+
+# === LOCALHOST & DEVELOPMENT ===
+# Basic localhost access with relaxed security for development
+Host localhost 127.0.0.1
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts_local
+    LogLevel ERROR
+
+# === LOCAL NETWORK ===
+# Development-friendly settings for .local domains
+Host *.local
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts_local
+    CheckHostIP yes
+    LogLevel QUIET
+
+# === GLOBAL DEFAULTS ===
+# Essential settings for all other hosts
+# Port 22 is SSH default - no need to specify
+Host *
+    # Core security
+    Protocol 2
+    StrictHostKeyChecking yes
+    HashKnownHosts yes
+    CheckHostIP yes
+    
+    # Authentication essentials
+    PubkeyAuthentication yes
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    IdentitiesOnly no
+    
+    # Security defaults
+    ForwardAgent no
+    ForwardX11 no
+    PermitLocalCommand no
+    
+    # Cross-platform crypto (compatible with older SSH)
+    # Users can override in config.local for newer systems
+    PubkeyAcceptedAlgorithms ssh-ed25519,ssh-rsa,rsa-sha2-512,rsa-sha2-256
+    HostKeyAlgorithms ssh-ed25519,ssh-rsa,rsa-sha2-512,rsa-sha2-256
+    KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group14-sha256
+    Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr,aes128-ctr
+    MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256
+    
+    # Connection basics
+    Compression yes
+    TCPKeepAlive yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    ConnectionAttempts 2
+    ConnectTimeout 10
+    
+    # Connection multiplexing (widely supported)
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%r@%h:%p
+    ControlPersist 5m
+    
+    # Basic logging
+    LogLevel INFO

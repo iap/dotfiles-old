@@ -1,0 +1,55 @@
+#!/bin/sh
+# Cross-platform pinentry fallback script
+# Tries platform-specific pinentry programs with fallbacks
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [pinentry-options]
+
+Cross-platform pinentry fallback script for GPG.
+Automatically selects the best available pinentry program.
+
+Priority order:
+  1. Terminal-based: pinentry-curses, pinentry-tty
+  2. GUI fallbacks: pinentry-gtk-2, pinentry-gtk, pinentry-qt
+  3. macOS specific: pinentry-mac
+  4. MacPorts paths: /opt/local/bin/pinentry-*
+
+Options:
+  All options are passed through to the selected pinentry program
+  -h, --help    Show this help message
+
+Examples:
+  $(basename "$0")           # Interactive pinentry
+  $(basename "$0") --version  # Show pinentry version
+
+Note: This script is typically called by GPG agent, not directly.
+EOF
+}
+
+# Handle help options
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
+# Terminal-first fallbacks - prefer non-GUI pinentry programs
+for pinentry_cmd in pinentry-curses pinentry-tty pinentry-gtk-2 pinentry-gtk pinentry-qt pinentry-qt4 pinentry-mac; do
+  command -v "$pinentry_cmd" >/dev/null 2>&1 && exec "$pinentry_cmd" "$@"
+done
+
+# MacPorts alternatives (optional)
+for pinentry_cmd in /opt/local/bin/pinentry-curses /opt/local/bin/pinentry-gtk2; do
+  [ -x "$pinentry_cmd" ] && exec "$pinentry_cmd" "$@"
+done
+
+# Final fallback
+echo "ERROR: No usable pinentry program found" 1>&2
+echo "Please install a pinentry program:" 1>&2
+echo "  macOS: sudo port install pinentry-mac" 1>&2
+echo "  Linux: sudo apt-get install pinentry-gtk2 (or pinentry-curses)" 1>&2
+exit 1

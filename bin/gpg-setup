@@ -1,0 +1,254 @@
+#!/bin/sh
+# GPG setup and key management script
+# Helps with initial GPG configuration and key operations
+
+set -e
+
+# Functions
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/gpg-setup.log"
+}
+
+check_gpg() {
+  if ! command -v gpg >/dev/null 2>&1; then
+    echo "Error: GPG not found. Please install GPG:" >&2
+    echo "  macOS: sudo port install gnupg2" >&2
+    echo "  Linux: sudo apt-get install gnupg" >&2
+    exit 1
+  fi
+}
+
+check_pinentry() {
+  if [ "$(uname)" = "Darwin" ]; then
+    if [ ! -x /opt/local/bin/pinentry-mac ] && [ ! -x /Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac ]; then
+      echo "Warning: pinentry-mac not found" >&2
+      echo "Install with: sudo port install pinentry-mac" >&2
+      return 1
+    fi
+  else
+    if ! command -v pinentry-gtk-2 >/dev/null 2>&1 && \
+       ! command -v pinentry-curses >/dev/null 2>&1; then
+      echo "Warning: No suitable pinentry program found" >&2
+      echo "Install with: sudo apt-get install pinentry-gtk2" >&2
+      return 1
+    fi
+  fi
+  return 0
+}
+
+setup_gpg_dir() {
+  log "Setting up GPG directory"
+  mkdir -p "$HOME/.gnupg"
+  chmod 700 "$HOME/.gnupg"
+  
+  # Create subdirectories
+  mkdir -p "$HOME/.gnupg/private-keys-v1.d"
+  chmod 700 "$HOME/.gnupg/private-keys-v1.d"
+  
+  mkdir -p "$HOME/.gnupg/revocs.d"
+  chmod 700 "$HOME/.gnupg/revocs.d"
+  
+  log "GPG directory setup complete"
+}
+
+test_gpg() {
+  log "Testing GPG configuration"
+  
+  # Test basic GPG functionality
+  echo "test message" | gpg --armor --sign --output /dev/null 2>/dev/null || {
+    echo "GPG test failed - this is normal if no keys exist yet"
+    return 1
+  }
+  
+  log "GPG test successful"
+  return 0
+}
+
+generate_key() {
+  cat << EOF
+Generating a new GPG key with secure defaults...
+
+This will create an Ed25519 primary key for certification and authentication,
+with an Ed25519 subkey for signing and an Cv25519 subkey for encryption.
+
+EOF
+  
+  printf "Enter your full name: "
+  read -r full_name
+  
+  printf "Enter your email address: "
+  read -r email
+  
+  printf "Enter key expiration (e.g., 2y for 2 years, 0 for no expiration): "
+  read -r expiry
+  
+  # Generate batch file for unattended key generation
+  cat > "$HOME/.gnupg/keygen.batch" << EOF
+%echo Generating GPG key
+Key-Type: EDDSA
+Key-Curve: Ed25519
+Key-Usage: cert
+Subkey-Type: EDDSA
+Subkey-Curve: Ed25519
+Subkey-Usage: sign
+Subkey-Type: ECDH
+Subkey-Curve: Cv25519
+Subkey-Usage: encrypt
+Name-Real: $full_name
+Name-Email: $email
+Expire-Date: $expiry
+%commit
+%echo GPG key generation complete
+EOF
+  
+  log "Generating GPG key for $full_name <$email>"
+  gpg --batch --generate-key "$HOME/.gnupg/keygen.batch"
+  
+  # Clean up batch file
+  rm -f "$HOME/.gnupg/keygen.batch"
+  
+  log "GPG key generation complete"
+  
+  # Show the new key
+  echo ""
+  echo "Your new GPG key:"
+  gpg --list-secret-keys --keyid-format LONG
+}
+
+import_keys() {
+  log "Importing GPG keys"
+  
+  # Restart GPG agent to ensure pinentry is working
+  echo "Restarting GPG agent..."
+  gpgconf --kill gpg-agent 2>/dev/null || true
+  sleep 1
+  
+  echo "Choose import method:"
+  echo "1. Import from file"
+  echo "2. Import from clipboard"
+  printf "Select option (1-2): "
+  read -r choice
+  
+  case "$choice" in
+    1)
+      printf "Enter path to GPG key file: "
+      read -r keyfile
+      # Expand tilde and variables
+      keyfile=$(eval echo "$keyfile")
+      if [ ! -f "$keyfile" ]; then
+        echo "Error: File not found: $keyfile" >&2
+        exit 1
+      fi
+      log "Importing keys from $keyfile"
+      gpg --import "$keyfile"
+      ;;
+    2)
+      echo "Paste your GPG key, then signal end-of-input:"
+      echo "  - On macOS Terminal: Press Ctrl+D (or Cmd+D)"
+      echo "  - After pasting: Press Enter, then Ctrl+D"
+      echo "  - You should see a line that says '^D' when done"
+      echo ""
+      echo "Paste your GPG private key now:"
+      log "Importing keys from clipboard"
+      gpg --import
+      ;;
+    *)
+      echo "Error: Invalid option" >&2
+      exit 1
+      ;;
+  esac
+  
+  echo ""
+  echo "Imported keys:"
+  gpg --list-secret-keys --keyid-format LONG
+  
+  echo ""
+  echo "To trust an imported key, run:"
+  echo "  gpg --edit-key KEY_ID"
+  echo "  Then type 'trust' and select trust level"
+  
+  log "GPG key import complete"
+}
+
+backup_keys() {
+  log "Creating GPG key backup"
+  
+  mkdir -p "$HOME/.backup/gpg"
+  chmod 700 "$HOME/.backup/gpg"
+  
+  # Export public keys
+  gpg --export --armor > "$HOME/.backup/gpg/public-keys-$(date +%Y%m%d).asc"
+  
+  # Export secret keys (encrypted)
+  echo "Enter a strong passphrase for the backup encryption:"
+  gpg --export-secret-keys --armor | gpg --symmetric --cipher-algo AES256 --output "$HOME/.backup/gpg/secret-keys-$(date +%Y%m%d).asc.gpg"
+  
+  # Export trust database
+  gpg --export-ownertrust > "$HOME/.backup/gpg/trust-$(date +%Y%m%d).txt"
+  
+  log "GPG backup created in $HOME/.backup/gpg/"
+}
+
+usage() {
+  cat << EOF
+Usage: $(basename "$0") [command]
+
+Commands:
+  setup       - Setup GPG directory and test configuration
+  generate    - Generate a new GPG key with secure defaults
+  import      - Import existing GPG keys from file or clipboard
+  backup      - Backup GPG keys and trust database
+  test        - Test GPG functionality
+  info        - Show GPG version and key information
+  
+Examples:
+  $(basename "$0") setup      # Initial GPG setup
+  $(basename "$0") generate   # Create a new key
+  $(basename "$0") import     # Import existing keys
+  $(basename "$0") backup     # Backup existing keys
+EOF
+}
+
+# Main script logic
+case "${1:-}" in
+  setup)
+    check_gpg
+    check_pinentry || echo "Warning: Pinentry issues detected"
+    setup_gpg_dir
+    test_gpg || echo "GPG test failed - you may need to generate keys first"
+    ;;
+  generate)
+    check_gpg
+    setup_gpg_dir
+    generate_key
+    ;;
+  import)
+    check_gpg
+    setup_gpg_dir
+    import_keys
+    ;;
+  backup)
+    check_gpg
+    backup_keys
+    ;;
+  test)
+    check_gpg
+    test_gpg
+    ;;
+  info)
+    check_gpg
+    echo "GPG Version:"
+    gpg --version | head -1
+    echo ""
+    echo "GPG Keys:"
+    gpg --list-secret-keys --keyid-format LONG || echo "No secret keys found"
+    ;;
+  ""|help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Error: Unknown command '$1'" >&2
+    usage
+    exit 1
+    ;;
+esac

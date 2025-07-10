@@ -1,0 +1,25 @@
+# Git local configuration template
+# Copy this file to ~/.gitconfig.local and customize with your settings
+# This file is automatically included by the main Git config
+
+[user]
+    # Set your name and email
+    #name = Your Name
+    #email = user@example.com
+    
+    # GPG sign commits - uncomment and set your signing key
+    #signingkey = YOUR_GPG_KEY_ID
+
+[commit]
+    # GPG sign commits - uncomment to enable
+    #gpgsign = true
+
+# Example: Override default editor for this machine
+# [core]
+#     editor = code --wait
+
+# Example: Machine-specific aliases
+# [alias]
+#     deploy = !git push origin main && ssh server 'cd /app && git pull'
+#     work = !git config user.email 'work@company.com'
+#     personal = !git config user.email 'personal@gmail.com'
