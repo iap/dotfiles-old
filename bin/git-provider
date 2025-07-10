@@ -55,6 +55,37 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/git-provider.log"
 }
 
+check_network() {
+  # Test basic connectivity
+  if ping -c 1 1.1.1.1 >/dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+require_network() {
+  local operation="$1"
+  
+  # Check if OFFLINE_MODE is set
+  if [ "${OFFLINE_MODE:-0}" = "1" ]; then
+    log "OFFLINE_MODE enabled, blocking network operation: $operation"
+    echo "Error: Operation '$operation' requires network access" >&2
+    echo "OFFLINE_MODE is enabled. Set OFFLINE_MODE=0 to allow network operations." >&2
+    exit 1
+  fi
+  
+  # Test network connectivity
+  if ! check_network; then
+    log "Network connectivity test failed for operation: $operation"
+    echo "Error: No network connectivity detected for operation: $operation" >&2
+    echo "Please check your internet connection and try again." >&2
+    exit 1
+  fi
+  
+  log "Network access verified for operation: $operation"
+}
+
 load_providers_config() {
   if [ -f "$PROVIDERS_CONFIG" ]; then
     . "$PROVIDERS_CONFIG"
@@ -274,6 +305,7 @@ add_remote() {
 }
 
 push_all() {
+  require_network "push-all"
   load_providers_config
   
   if [ -z "$PROVIDERS" ]; then
@@ -307,6 +339,7 @@ push_all() {
 }
 
 pull_primary() {
+  require_network "pull-primary"
   load_providers_config
   
   if [ -z "$PRIMARY_PROVIDER" ]; then
@@ -355,7 +388,13 @@ show_status() {
       echo "Provider: $provider"
       echo "  URL: $url"
       echo "  SSH Key: ${key:-default}"
-      echo "  Status: $(git ls-remote --heads "$provider" 2>/dev/null | wc -l | tr -d ' ') branches"
+      
+      # Check network before attempting ls-remote
+      if [ "${OFFLINE_MODE:-0}" = "1" ] || ! check_network; then
+        echo "  Status: offline (network unavailable)"
+      else
+        echo "  Status: $(git ls-remote --heads "$provider" 2>/dev/null | wc -l | tr -d ' ') branches"
+      fi
       echo ""
     done
   fi

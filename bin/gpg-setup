@@ -9,6 +9,37 @@ log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/gpg-setup.log"
 }
 
+check_network() {
+  # Test basic connectivity
+  if ping -c 1 1.1.1.1 >/dev/null 2>&1; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+require_network() {
+  local operation="$1"
+  
+  # Check if OFFLINE_MODE is set
+  if [ "${OFFLINE_MODE:-0}" = "1" ]; then
+    log "OFFLINE_MODE enabled, blocking network operation: $operation"
+    echo "Error: Operation '$operation' requires network access" >&2
+    echo "OFFLINE_MODE is enabled. Set OFFLINE_MODE=0 to allow network operations." >&2
+    exit 1
+  fi
+  
+  # Test network connectivity
+  if ! check_network; then
+    log "Network connectivity test failed for operation: $operation"
+    echo "Error: No network connectivity detected for operation: $operation" >&2
+    echo "Please check your internet connection and try again." >&2
+    exit 1
+  fi
+  
+  log "Network access verified for operation: $operation"
+}
+
 check_gpg() {
   if ! command -v gpg >/dev/null 2>&1; then
     echo "Error: GPG not found. Please install GPG:" >&2
@@ -212,22 +243,26 @@ EOF
 # Main script logic
 case "${1:-}" in
   setup)
+    require_network "setup"
     check_gpg
     check_pinentry || echo "Warning: Pinentry issues detected"
     setup_gpg_dir
     test_gpg || echo "GPG test failed - you may need to generate keys first"
     ;;
   generate)
+    require_network "generate"
     check_gpg
     setup_gpg_dir
     generate_key
     ;;
   import)
+    require_network "import"
     check_gpg
     setup_gpg_dir
     import_keys
     ;;
   backup)
+    require_network "backup"
     check_gpg
     backup_keys
     ;;
