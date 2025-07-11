@@ -106,7 +106,7 @@ Both shells share the same:
 - **Cross-platform**: Works seamlessly on macOS and Linux servers
 - **Server-Ready**: Enhanced pinentry-fallback with headless environment detection
 - **Secure**: Proper permissions, process locking, and security modes
-- **Minimal**: Essential tools only with KISS principle
+- **Minimal**: Essential tools by platform
 - **Extensible**: Local override support with template system
 
 ## Local Customization
