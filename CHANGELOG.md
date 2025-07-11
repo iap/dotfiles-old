@@ -2,6 +2,29 @@
 
 All notable changes to this dotfiles configuration are documented here.
 
+## [2.0.1] - 2025-07-11
+
+### Dynamic Path Resolution and Permission Consistency
+- **GPG Template System**: Replaced static gpg-agent.conf with dynamic template using %h placeholder
+- **Permission Consistency**: Fixed pinentry symlink permissions (711) to match bin directory
+- **Bootstrap Improvements**: Unified umask strategy between bootstrap and fix-permissions
+- **Validation Updates**: Corrected validation checks for new template system
+
+### Added
+- **Dynamic GPG Configuration**: Template-based gpg-agent.conf with automatic path substitution
+- **Consistent Permission Strategy**: All symlinks now use umask 066 for 711 permissions
+- **Template Validation**: Proper validation of GPG template placeholder usage
+
+### Fixed
+- **Permission Inconsistency**: Bootstrap now uses umask 066 matching fix-permissions
+- **GPG Agent Path**: Dynamic path resolution eliminates hardcoded home directory
+- **Validation Errors**: Updated checks to work with new template system
+- **Symlink Permissions**: Pinentry symlinks now correctly have 711 permissions
+
+### Removed
+- **Static GPG Config**: Removed redundant gnupg/gpg-agent.conf in favor of template
+- **Backup Files**: Cleaned up old dotfiles backup files
+
 ## [2.0.0] - 2025-07-11
 
 ### Major Architecture Update

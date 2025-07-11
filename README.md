@@ -1,6 +1,6 @@
 # Dotfiles
 
-> **Version**: 2.0.0 | **Last Updated**: 2025-07-11T11:13:00Z | **Status**: ✅ Stable
+> **Version**: 2.0.1 | **Last Updated**: 2025-07-11T16:07:00Z | **Status**: ✅ Stable
 
 Minimal, secure, and cross-platform development environment configuration with modular architecture and comprehensive safety features.
 
@@ -36,7 +36,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── gitconfig              # Git configuration
 ├── gitignore_global       # Global Git ignore rules
 ├── gnupg/                 # GPG configuration
-│   ├── gpg-agent.conf     # GPG agent settings (SSH support)
+│   ├── gpg-agent.conf.template # GPG agent template (dynamic paths)
 │   └── gpg.conf           # GPG client configuration
 ├── hushlogin              # Suppress login messages
 ├── profile                # POSIX shell profile
@@ -279,6 +279,13 @@ Synchronize dotfiles across multiple Git providers:
 - Connection multiplexing and optimization for Git operations
 - Separate known_hosts for local vs remote hosts
 - Port 22 by default (customizable per host in config.local)
+
+### Dynamic Configuration System
+The dotfiles system uses template-based configuration for cross-platform compatibility:
+- **GPG Agent Template**: `gnupg/gpg-agent.conf.template` with `%h` placeholder for dynamic home path
+- **Bootstrap Processing**: Templates processed during setup with actual paths
+- **Path Independence**: No hardcoded paths in configuration files
+- **Cross-Platform**: Works across different user directories and systems
 
 ### Email Integration
 - Template-based forwarding configuration

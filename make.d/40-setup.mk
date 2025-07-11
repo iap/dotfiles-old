@@ -81,14 +81,16 @@ ifdef DRY_RUN
 	@echo "[DRY-RUN] Would set GPG permissions: chmod 700 $(HOME)/.gnupg"
 	@echo "[DRY-RUN] Would create GPG symlinks:"
 	@echo "[DRY-RUN]   ln -sf $(PWD)/gnupg/gpg.conf $(HOME)/.gnupg/gpg.conf"
-	@echo "[DRY-RUN]   cp $(PWD)/gnupg/gpg-agent.conf $(HOME)/.gnupg/gpg-agent.conf"
+	@echo "[DRY-RUN] Would process template: $(PWD)/gnupg/gpg-agent.conf.template -> $(HOME)/.gnupg/gpg-agent.conf"
+	@echo "[DRY-RUN] Would replace %h with $(HOME) in template"
 	@echo "[DRY-RUN] Would set GPG file permissions: chmod 600 $(HOME)/.gnupg/gpg.conf $(HOME)/.gnupg/gpg-agent.conf"
 else
 	@mkdir -p "$(HOME)/.gnupg"
 	@chmod 700 "$(HOME)/.gnupg"
 	@ln -sf "$(PWD)/gnupg/gpg.conf" "$(HOME)/.gnupg/gpg.conf"
-	@cp "$(PWD)/gnupg/gpg-agent.conf" "$(HOME)/.gnupg/gpg-agent.conf"
-	@# gpg-agent.conf is copied from dotfiles and already contains correct pinentry path
+	@# Process gpg-agent.conf template with dynamic path substitution
+	@sed 's|%h|$(HOME)|g' "$(PWD)/gnupg/gpg-agent.conf.template" > "$(HOME)/.gnupg/gpg-agent.conf"
+	@echo "Processed GPG agent template: %h -> $(HOME)"
 	@chmod 600 "$(HOME)/.gnupg/gpg.conf" "$(HOME)/.gnupg/gpg-agent.conf"
 endif
 	@echo "Linking SSH configuration..."
@@ -122,7 +124,7 @@ else
 	@# Ensure source scripts are executable
 	@chmod 755 "$(PWD)/bin/pinentry-"* "$(PWD)/bin/ssh-keygen-secure" "$(PWD)/bin/gpg-setup" "$(PWD)/bin/git-provider" "$(PWD)/bin/gpg-ssh" 2>/dev/null || true
 	@# Create symlinks with 711 permissions to match bin directory
-	@old_umask=$$(umask); umask 022; \
+	@old_umask=$$(umask); umask 066; \
 		ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"; \
 		ln -sf "$(PWD)/bin/ssh-keygen-secure" "$(HOME)/bin/ssh-keygen-secure"; \
 		ln -sf "$(PWD)/bin/git-provider" "$(HOME)/bin/git-provider"; \

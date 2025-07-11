@@ -61,7 +61,7 @@ validate:
 	@echo "[OK] No hardcoded paths found"
 	@echo "Checking dynamic path resolution..."
 	@grep -q "(PWD)" make.d/*.mk && echo "[OK] Makefiles use dynamic paths" || (echo "[ERROR] Makefiles should use \$$(PWD)"; exit 1)
-	@grep -q "%h" gnupg/gpg-agent.conf && echo "[OK] GPG config uses placeholder" || (echo "[ERROR] GPG config should use %h placeholder"; exit 1)
+	@grep -q "%h" gnupg/gpg-agent.conf.template && echo "[OK] GPG template uses placeholder" || (echo "[ERROR] GPG template should use %h placeholder"; exit 1)
 	@echo "Checking security settings..."
 	@grep -q "umask 077" config/env.d/default.sh && echo "[OK] Secure umask configured" || (echo "[ERROR] umask 077 required"; exit 1)
 	@grep -q "PATH.*sed.*\\.(:|$$)" config/env.d/default.sh && echo "[OK] PATH hardening configured" || (echo "[ERROR] PATH hardening required"; exit 1)
@@ -130,10 +130,10 @@ validate-permissions:
 		else \
 			SYM_PERM=$$(stat -c '%a' $(HOME)/bin/pinentry-fallback 2>/dev/null); \
 		fi; \
-		if [ "$$SYM_PERM" = "755" ]; then \
+		if [ "$$SYM_PERM" = "711" ]; then \
 			echo "[OK] pinentry-fallback symlink permissions: $$SYM_PERM"; \
 		else \
-			echo "[WARNING] pinentry-fallback symlink permissions: $$SYM_PERM (should be 755)"; \
+			echo "[WARNING] pinentry-fallback symlink permissions: $$SYM_PERM (should be 711)"; \
 		fi;\
 	fi
 	@echo "Permission validation complete"
