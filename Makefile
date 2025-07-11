@@ -150,6 +150,14 @@ validate-permissions:
 			fi; \
 		fi; \
 	done
+	@echo "Checking XDG directory structure..."
+	@for dir in .local .local/share .local/state .cache/vim; do \
+		if [ -d "$(HOME)/$$dir" ]; then \
+			echo "[OK] $$dir directory exists"; \
+		else \
+			echo "[WARNING] $$dir directory missing"; \
+		fi; \
+	done
 	@echo "Checking pinentry script permissions..."
 	@if [ -f "$(HOME)/bin/pinentry-fallback" ]; then \
 		if [ -x "$(HOME)/bin/pinentry-fallback" ]; then \
@@ -185,9 +193,15 @@ link-dotfiles:
 	@mkdir -p "$(HOME)/.logs" "$(HOME)/.cache" "$(HOME)/Projects"
 	@mkdir -p "$(HOME)/.backup/system" "$(HOME)/.backup/projects" "$(HOME)/.backup/gpg" "$(HOME)/.backup/logs"
 	@mkdir -p "$(HOME)/bin"
+	@# Create XDG Base Directory structure
+	@mkdir -p "$(HOME)/.local/share" "$(HOME)/.local/state"
+	@# Create vim cache directories (referenced in vimrc)
+	@mkdir -p "$(HOME)/.cache/vim/backup" "$(HOME)/.cache/vim/swap" "$(HOME)/.cache/vim/undo"
 	@# Set secure permissions for sensitive directories
 	@chmod 700 "$(HOME)/.backup" "$(HOME)/.logs"
 	@chmod 711 "$(HOME)/bin"  # Match home directory for consistency
+	@chmod 755 "$(HOME)/.local"  # XDG directories should be accessible
+	@chmod 755 "$(HOME)/.local/share" "$(HOME)/.local/state"
 	@ln -sf "$(PWD)/config/env.d/default.sh" "$(HOME)/.config/env.d/default.sh"
 	@ln -sf "$(PWD)/zshrc" "$(HOME)/.zshrc"
 	@ln -sf "$(PWD)/bashrc" "$(HOME)/.bashrc"
