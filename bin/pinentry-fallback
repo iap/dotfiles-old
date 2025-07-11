@@ -37,10 +37,40 @@ for arg in "$@"; do
   esac
 done
 
-# Terminal-first fallbacks - prefer non-GUI pinentry programs
-for pinentry_cmd in pinentry-curses pinentry-tty pinentry-gtk-2 pinentry-gtk pinentry-qt pinentry-qt4 pinentry-mac; do
-  command -v "$pinentry_cmd" >/dev/null 2>&1 && exec "$pinentry_cmd" "$@"
+# Log function for debugging
+log_debug() {
+  echo "$(date): $*" >> "$HOME/.logs/pinentry.log" 2>/dev/null || true
+}
+
+# Terminal-first fallbacks - prioritize text-based for servers
+# Priority order: terminal-only > terminal-capable > GUI-only
+log_debug "pinentry-fallback: Starting with args: $*"
+
+# Check if we're in a headless environment
+if [ -z "$DISPLAY" ] && [ -z "$SSH_TTY" ] && [ "$TERM" = "dumb" ]; then
+  log_debug "Headless environment detected - using terminal-only pinentry"
+  HEADLESS_MODE=1
+else
+  HEADLESS_MODE=0
+fi
+
+# Priority 1: Terminal-only pinentry (works on all servers)
+for pinentry_cmd in pinentry-curses pinentry-tty; do
+  if command -v "$pinentry_cmd" >/dev/null 2>&1; then
+    log_debug "Using terminal pinentry: $pinentry_cmd"
+    exec "$pinentry_cmd" "$@"
+  fi
 done
+
+# Priority 2: GUI pinentry (only if not headless)
+if [ "$HEADLESS_MODE" = "0" ]; then
+  for pinentry_cmd in pinentry-gtk-2 pinentry-gtk pinentry-qt pinentry-qt4 pinentry-mac; do
+    if command -v "$pinentry_cmd" >/dev/null 2>&1; then
+      log_debug "Using GUI pinentry: $pinentry_cmd"
+      exec "$pinentry_cmd" "$@"
+    fi
+  done
+fi
 
 # MacPorts alternatives (optional)
 for pinentry_cmd in /opt/local/bin/pinentry-curses /opt/local/bin/pinentry-gtk2; do
@@ -48,8 +78,22 @@ for pinentry_cmd in /opt/local/bin/pinentry-curses /opt/local/bin/pinentry-gtk2;
 done
 
 # Final fallback
+log_debug "No pinentry program found - providing installation guidance"
 echo "ERROR: No usable pinentry program found" 1>&2
 echo "Please install a pinentry program:" 1>&2
-echo "  macOS: sudo port install pinentry-mac" 1>&2
-echo "  Linux: sudo apt-get install pinentry-gtk2 (or pinentry-curses)" 1>&2
+echo "" 1>&2
+echo "For servers (headless/terminal):" 1>&2
+echo "  Ubuntu/Debian: sudo apt-get install pinentry-curses" 1>&2
+echo "  CentOS/RHEL:   sudo yum install pinentry-curses" 1>&2
+echo "  Alpine:        sudo apk add pinentry-curses" 1>&2
+echo "" 1>&2
+echo "For desktop environments:" 1>&2
+echo "  macOS:         sudo port install pinentry-mac" 1>&2
+echo "  Linux GUI:     sudo apt-get install pinentry-gtk2" 1>&2
+echo "" 1>&2
+echo "Environment info for debugging:" 1>&2
+echo "  TERM=$TERM" 1>&2
+echo "  DISPLAY=$DISPLAY" 1>&2
+echo "  SSH_TTY=$SSH_TTY" 1>&2
+echo "  PATH=$PATH" 1>&2
 exit 1

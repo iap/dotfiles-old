@@ -1,19 +1,8 @@
 # Dotfiles
 
-> **Version**: 1.2.1 | **Last Updated**: 2025-07-11T06:24:00Z | **Status**: ✅ Stable
+> **Version**: 2.0.0 | **Last Updated**: 2025-07-11T11:13:00Z | **Status**: ✅ Stable
 
-Minimal, secure, and cross-platform development environment configuration with optimized variable syntax and enhanced compatibility.
-
-## What's New in v1.2.0
-
-**Major Optimizations & Cross-Platform Improvements:**
-- **SSH Config Overhaul**: Eliminated redundant Port 22 specifications, now uses SSH defaults for cleaner config
-- **Essential vs Template Architecture**: Main config provides essential cross-platform defaults, local config for customization
-- **Enhanced Compatibility**: Fixed macOS readlink issues, now works seamlessly on older Unix systems (OpenSSH 6.0+)
-- **Variable Syntax Bulletproofing**: Comprehensive fixes for all variable usage patterns across the project
-- **GPG SSH Auth Fixes**: Resolved pinentry path issues causing "agent refused operation" errors
-- **Permissions**: Ensured pinentry-fallback symlink has 755 permissions for proper GPG agent execution
-- **Beautiful Config Templates**: Restructured SSH config.local with comprehensive examples for all scenarios
+Minimal, secure, and cross-platform development environment configuration with modular architecture and comprehensive safety features.
 
 ## Overview
 
@@ -23,16 +12,23 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 
 ```
 .dotfiles/
-├── Makefile                # Environment management and automation
+├── Makefile                # Main Makefile (modular architecture)
+├── make.d/                 # Modular Makefile components
+│   ├── 05-safety.mk       # Shell safety and reliability
+│   ├── 10-help.mk         # Help and information
+│   ├── 20-validation.mk   # System validation
+│   ├── 30-permissions.mk  # Permission management
+│   ├── 40-setup.mk        # Bootstrap and setup
+│   └── 50-maintenance.mk  # Cleanup and backup
 ├── README.md              # Documentation
-├── CHANGELOG.md           # Version history and changes
-├── VERSION                # Current version number
+├── CHANGELOG.md           # Version history
+├── VERSION                # Current version
 ├── bashrc                 # Bash shell configuration
 ├── bin/                   # Essential utility scripts
 │   ├── git-provider       # Multi-provider Git management
 │   ├── gpg-setup          # GPG key management
 │   ├── gpg-ssh            # GPG SSH authentication
-│   ├── pinentry-fallback  # Cross-platform pinentry
+│   ├── pinentry-fallback  # Cross-platform pinentry (enhanced)
 │   └── ssh-keygen-secure  # Secure SSH key generation
 ├── config/
 │   └── env.d/
@@ -40,7 +36,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── gitconfig              # Git configuration
 ├── gitignore_global       # Global Git ignore rules
 ├── gnupg/                 # GPG configuration
-│   ├── gpg-agent.conf     # GPG agent settings (SSH support) - copied for stability
+│   ├── gpg-agent.conf     # GPG agent settings (SSH support)
 │   └── gpg.conf           # GPG client configuration
 ├── hushlogin              # Suppress login messages
 ├── profile                # POSIX shell profile
@@ -48,7 +44,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 │   ├── aliases.sh         # Common aliases for bash/zsh
 │   └── env.sh             # Shared environment loader
 ├── ssh/
-│   └── config             # SSH client configuration (essential cross-platform defaults)
+│   └── config             # SSH client configuration
 ├── template/              # Local configuration templates
 │   ├── config.local       # SSH host configuration template
 │   ├── default.local.sh   # Environment variable overrides template
@@ -58,7 +54,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── vimrc                  # Vim editor configuration
 └── zshrc                  # Zsh shell configuration
 
-8 directories, 22 files
+9 directories, 27 files
 ```
 
 ## Installation
@@ -105,12 +101,13 @@ Both shells share the same:
 
 ## Key Features
 
-- **Cross-platform**: Works on macOS and Linux
-- **Package Management**: MacPorts integration on macOS, native package managers on Linux
-- **Modular**: Organized configuration files
-- **Secure**: Proper permissions and security modes
-- **Minimal**: Essential tools only
-- **Extensible**: Local override support
+- **Modular Architecture**: 6 focused Makefile modules with single responsibility
+- **Safety First**: Comprehensive safety features with dry-run support and crash prevention
+- **Cross-platform**: Works seamlessly on macOS and Linux servers
+- **Server-Ready**: Enhanced pinentry-fallback with headless environment detection
+- **Secure**: Proper permissions, process locking, and security modes
+- **Minimal**: Essential tools only with KISS principle
+- **Extensible**: Local override support with template system
 
 ## Local Customization
 
@@ -152,28 +149,31 @@ export NODE_ENV="development"
 
 Run `make help` to see available targets:
 
-- `make bootstrap` - Complete setup
-- `make validate` - Check configuration
+### Core Operations
+- `make bootstrap` - Complete setup with safety features
+- `make validate` - System configuration validation
 - `make link-dotfiles` - Create symbolic links
 - `make clean-cache` - Clear cache directory
 - `make backup` - Backup configuration
 
+### Safety & Testing
+- `make test-safety` - Test safety and reliability features
+- `make help-safety` - Show safety feature documentation
+- All targets support `DRY_RUN=1` for safe preview
+
+### Safety Modes
+- `DRY_RUN=1` - Preview actions without executing
+- `OFFLINE_MODE=1` - Skip network operations
+- `TIMEOUT=seconds` - Override operation timeout
+- Example: `make bootstrap DRY_RUN=1 TIMEOUT=600`
+
 ## Development Workflow
-
-This project follows universal development standards for consistent, secure development:
-
-**Development Standards Include**:
-- Pre-push checklist ✅
-- Commit message guidelines (conventional commits)
-- Release process with proper versioning
-- Quality gates and validation
-- Security standards and best practices
-- Cross-platform compatibility
 
 **Project-specific validation**:
 ```bash
 make validate              # System configuration validation
 make check-compliance      # POSIX compliance and security
+make test-safety           # Test safety and reliability features
 ```
 
 ## Switching Between Shells
