@@ -2,6 +2,24 @@
 
 All notable changes to this dotfiles configuration are documented here.
 
+## [1.2.1] - 2025-07-11
+
+### Fixed
+- **Critical GPG SSH Authentication**: Fixed pinentry-fallback symlink permissions causing "agent refused operation" errors
+- **Symlink Permissions**: Changed pinentry-fallback symlink from 711 to 755 permissions to allow GPG agent execution
+- **Script Consistency**: Removed hardcoded `OFFLINE_MODE:-0` defaults from utility scripts
+- **Environment Inheritance**: Scripts now properly inherit system environment configuration
+
+### Changed
+- **Network Mode Default**: Changed `OFFLINE_MODE` default from `1` (offline) to `0` (network enabled)
+- **Consistent Script Behavior**: Fixed bin scripts (`gpg-setup`, `git-provider`) to respect system default instead of hardcoded fallbacks
+- **Unified Configuration**: All network-related scripts now consistently use the environment default configuration
+- **Makefile Validation**: Updated permission validation to expect 755 permissions for pinentry-fallback symlink
+
+### Documentation
+- **README**: Updated security features section to reflect network mode as default
+- **Configuration**: Clarified that network operations are enabled by default but can be disabled via `OFFLINE_MODE=1`
+
 ## [1.2.0] - 2025-07-10
 
 ### Major Optimizations

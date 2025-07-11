@@ -175,11 +175,11 @@ validate-permissions:
 		else \
 			SYM_PERM=$$(stat -c '%a' $(HOME)/bin/pinentry-fallback 2>/dev/null); \
 		fi; \
-		if [ "$$SYM_PERM" = "711" ]; then \
+		if [ "$$SYM_PERM" = "755" ]; then \
 			echo "[OK] pinentry-fallback symlink permissions: $$SYM_PERM"; \
 		else \
-			echo "[WARNING] pinentry-fallback symlink permissions: $$SYM_PERM (should be 711)"; \
-		fi; \
+			echo "[WARNING] pinentry-fallback symlink permissions: $$SYM_PERM (should be 755)"; \
+		fi;
 	fi
 	@echo "Permission validation complete"
 
@@ -229,9 +229,8 @@ link-dotfiles:
 	@# Ensure source scripts are executable
 	@chmod 755 "$(PWD)/bin/pinentry-"* "$(PWD)/bin/ssh-keygen-secure" "$(PWD)/bin/gpg-setup" "$(PWD)/bin/git-provider" "$(PWD)/bin/gpg-ssh" 2>/dev/null || true
 	@# Create symlinks with 711 permissions to match bin directory
-	@old_umask=$$(umask); umask 066; \
+	@old_umask=$$(umask); umask 022; \
 		ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"; \
-		umask 022; \
 		ln -sf "$(PWD)/bin/ssh-keygen-secure" "$(HOME)/bin/ssh-keygen-secure"; \
 		ln -sf "$(PWD)/bin/git-provider" "$(HOME)/bin/git-provider"; \
 		ln -sf "$(PWD)/bin/gpg-setup" "$(HOME)/bin/gpg-setup"; \

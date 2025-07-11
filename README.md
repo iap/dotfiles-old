@@ -1,6 +1,6 @@
 # Dotfiles
 
-> **Version**: 1.2.0 | **Last Updated**: 2025-07-10T02:52:00Z | **Status**: ✅ Stable
+> **Version**: 1.2.1 | **Last Updated**: 2025-07-11T06:24:00Z | **Status**: ✅ Stable
 
 Minimal, secure, and cross-platform development environment configuration with optimized variable syntax and enhanced compatibility.
 
@@ -11,7 +11,8 @@ Minimal, secure, and cross-platform development environment configuration with o
 - **Essential vs Template Architecture**: Main config provides essential cross-platform defaults, local config for customization
 - **Enhanced Compatibility**: Fixed macOS readlink issues, now works seamlessly on older Unix systems (OpenSSH 6.0+)
 - **Variable Syntax Bulletproofing**: Comprehensive fixes for all variable usage patterns across the project
-- **GPG SSH Auth Fixes**: Resolved pinentry path issues that caused "agent refused operation" errors
+- **GPG SSH Auth Fixes**: Resolved pinentry path issues causing "agent refused operation" errors
+- **Permissions**: Ensured pinentry-fallback symlink has 755 permissions for proper GPG agent execution
 - **Beautiful Config Templates**: Restructured SSH config.local with comprehensive examples for all scenarios
 
 ## Overview
@@ -201,7 +202,7 @@ The setup enforces secure permissions:
 
 ## Security Features
 
-- Offline mode by default (`OFFLINE_MODE=1`)
+- Network mode by default (`OFFLINE_MODE=0`)
 - Secure umask (077)
 - PATH hardening (removes current directory)
 - History protection in secure mode

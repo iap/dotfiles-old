@@ -22,7 +22,7 @@ require_network() {
   local operation="$1"
   
   # Check if OFFLINE_MODE is set
-  if [ "${OFFLINE_MODE:-0}" = "1" ]; then
+  if [ "${OFFLINE_MODE:-}" = "1" ]; then
     log "OFFLINE_MODE enabled, blocking network operation: $operation"
     echo "Error: Operation '$operation' requires network access" >&2
     echo "OFFLINE_MODE is enabled. Set OFFLINE_MODE=0 to allow network operations." >&2

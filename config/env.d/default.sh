@@ -35,7 +35,7 @@ export HISTSIZE=10000
 export SAVEHIST=10000
 
 # Network and security modes
-export OFFLINE_MODE="${OFFLINE_MODE:-1}"
+export OFFLINE_MODE="${OFFLINE_MODE:-0}"
 export SECURE_MODE="${SECURE_MODE:-0}"
 export DEBUG_MODE="${DEBUG_MODE:-0}"
 
