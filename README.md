@@ -39,7 +39,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── gitconfig              # Git configuration
 ├── gitignore_global       # Global Git ignore rules
 ├── gnupg/                 # GPG configuration
-│   ├── gpg-agent.conf     # GPG agent settings (SSH support)
+│   ├── gpg-agent.conf     # GPG agent settings (SSH support) - copied for stability
 │   └── gpg.conf           # GPG client configuration
 ├── hushlogin              # Suppress login messages
 ├── profile                # POSIX shell profile
