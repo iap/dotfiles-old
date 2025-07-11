@@ -2,6 +2,25 @@
 
 All notable changes to this dotfiles configuration are documented here.
 
+## [2.0.2] - 2025-07-11
+
+### Intelligent Terminal Default Switching
+- **OS-Aware Shell Detection**: Bootstrap now detects OS type and recommends appropriate shell
+- **Smart Recommendations**: macOS defaults to zsh, Linux prefers zsh if available or falls back to bash
+- **User-Friendly Feedback**: Clear status messages about current vs recommended shell
+- **Non-Intrusive**: Informational guidance only, respects user choice
+
+### Added
+- **check-shell-defaults Target**: New Makefile target for shell recommendation system
+- **Cross-Platform Logic**: Intelligent shell detection for macOS, Linux, and unknown systems
+- **Bootstrap Integration**: Shell checking seamlessly integrated into bootstrap workflow
+- **Clear Instructions**: Provides exact commands for shell switching when needed
+
+### Enhanced
+- **Bootstrap UX**: Better out-of-box experience with OS-appropriate defaults
+- **Documentation**: Real-time feedback about system configuration
+- **Cross-Platform Support**: Improved compatibility across different operating systems
+
 ## [2.0.1] - 2025-07-11
 
 ### Dynamic Path Resolution and Permission Consistency

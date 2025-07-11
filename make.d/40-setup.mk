@@ -1,10 +1,10 @@
 # Bootstrap and setup operations
 # Part of modular Makefile system
 
-.PHONY: bootstrap link-dotfiles setup-templates
+.PHONY: bootstrap link-dotfiles setup-templates check-shell-defaults
 
 # Full environment setup - corrected dependency order
-bootstrap: validate-prerequisites link-dotfiles setup-templates validate-permissions validate clean-cache auto-cleanup
+bootstrap: validate-prerequisites link-dotfiles setup-templates check-shell-defaults validate-permissions validate clean-cache auto-cleanup
 	@echo "Dotfiles environment setup complete"
 	@echo "Please restart your shell or run: source ~/.zshrc"
 	@echo ""
@@ -179,3 +179,44 @@ else
 	@ln -sf "$(HOME)/.forward.local" "$(HOME)/.forward"
 endif
 	@echo "Local configuration templates setup complete"
+
+# Check and recommend shell defaults based on OS type
+check-shell-defaults:
+	@echo "Checking shell defaults for your system..."
+	@case "$$(uname -s)" in \
+		Darwin) OS_TYPE="macOS" ;; \
+		Linux) OS_TYPE="linux" ;; \
+		*) OS_TYPE="unknown" ;; \
+	esac; \
+	CURRENT_SHELL=$$(basename "$$SHELL"); \
+	echo "Detected OS: $$OS_TYPE"; \
+	echo "Current shell: $$CURRENT_SHELL"; \
+	echo ""; \
+	if [ "$$OS_TYPE" = "macOS" ]; then \
+		RECOMMENDED="zsh"; \
+		REASON="macOS default since Catalina"; \
+	elif [ "$$OS_TYPE" = "linux" ]; then \
+		if command -v zsh >/dev/null 2>&1; then \
+			RECOMMENDED="zsh"; \
+			REASON="modern features available"; \
+		else \
+			RECOMMENDED="bash"; \
+			REASON="maximum compatibility"; \
+		fi; \
+	else \
+		RECOMMENDED="bash"; \
+		REASON="conservative fallback"; \
+	fi; \
+	echo "Recommended shell: $$RECOMMENDED ($$REASON)"; \
+	echo ""; \
+	if [ "$$CURRENT_SHELL" != "$$RECOMMENDED" ]; then \
+		echo "Info: Shell recommendation"; \
+		echo "  Your current shell ($$CURRENT_SHELL) differs from the recommended shell ($$RECOMMENDED)"; \
+		echo "  To switch to $$RECOMMENDED, run:"; \
+		echo "    chsh -s $$(command -v $$RECOMMENDED 2>/dev/null || echo "/bin/$$RECOMMENDED")"; \
+		echo "  Then restart your terminal"; \
+		echo ""; \
+		echo "  Both shells are supported by this dotfiles configuration."; \
+	else \
+		echo "[OK] Your shell ($$CURRENT_SHELL) matches the recommendation for $$OS_TYPE"; \
+	fi
