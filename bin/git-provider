@@ -393,7 +393,12 @@ show_status() {
       if [ "${OFFLINE_MODE:-}" = "1" ] || ! check_network; then
         echo "  Status: offline (network unavailable)"
       else
-        echo "  Status: $(git ls-remote --heads "$provider" 2>/dev/null | wc -l | tr -d ' ') branches"
+        # Check if remote exists without authentication
+        if git remote get-url "$provider" >/dev/null 2>&1; then
+          echo "  Status: configured (use 'git ls-remote $provider' to test connectivity)"
+        else
+          echo "  Status: remote not found"
+        fi
       fi
       echo ""
     done

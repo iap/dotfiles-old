@@ -1,4 +1,4 @@
-# GPG agent configuration
+# GPG agent configuration template
 # Secure agent settings with cross-platform pinentry support
 # SSH authentication support enabled
 
@@ -14,7 +14,7 @@ max-cache-ttl-ssh 7200
 
 # Cross-platform pinentry configuration
 # Uses fallback script for platform detection
-# Note: Will use $HOME/bin/pinentry-fallback when symlinked
+# %h placeholder will be replaced with actual HOME path during bootstrap
 pinentry-program %h/bin/pinentry-fallback
 
 # Additional security options
