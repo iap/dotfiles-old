@@ -16,13 +16,7 @@ bootstrap: validate-prerequisites link-dotfiles setup-templates validate-permiss
 # Create symbolic links for dotfiles with proper permissions
 link-dotfiles:
 	@echo "Linking dotfiles with secure permissions..."
-	@$(SAFETY_WRAPPER); \
-	$(LOCK_MECHANISM); \
-	$(RESOURCE_MONITOR); \
-	$(SAFE_FILE_OPS); \
-	acquire_lock; \
-	check_resources; \
-	echo "Setting baseline directory permissions..."
+	@echo "Setting baseline directory permissions..."
 ifdef DRY_RUN
 	@echo "[DRY-RUN] Would set HOME permission: chmod 711 $(HOME)"
 else
@@ -38,20 +32,14 @@ ifdef DRY_RUN
 	@echo "[DRY-RUN]   mkdir -p $(HOME)/.local/share $(HOME)/.local/state"
 	@echo "[DRY-RUN]   mkdir -p $(HOME)/.cache/vim/backup $(HOME)/.cache/vim/swap $(HOME)/.cache/vim/undo"
 else
-	@safe_mkdir "$(HOME)/.config/env.d"; \
-	safe_mkdir "$(HOME)/.logs"; \
-	safe_mkdir "$(HOME)/.cache"; \
-	safe_mkdir "$(HOME)/Projects"; \
-	safe_mkdir "$(HOME)/.backup/system"; \
-	safe_mkdir "$(HOME)/.backup/projects"; \
-	safe_mkdir "$(HOME)/.backup/gpg"; \
-	safe_mkdir "$(HOME)/.backup/logs"; \
-	safe_mkdir "$(HOME)/bin"; \
-	safe_mkdir "$(HOME)/.local/share"; \
-	safe_mkdir "$(HOME)/.local/state"; \
-	safe_mkdir "$(HOME)/.cache/vim/backup"; \
-	safe_mkdir "$(HOME)/.cache/vim/swap"; \
-	safe_mkdir "$(HOME)/.cache/vim/undo"
+	@mkdir -p "$(HOME)/.config/env.d"
+	@mkdir -p "$(HOME)/.logs" "$(HOME)/.cache" "$(HOME)/Projects"
+	@mkdir -p "$(HOME)/.backup/system" "$(HOME)/.backup/projects" "$(HOME)/.backup/gpg" "$(HOME)/.backup/logs"
+	@mkdir -p "$(HOME)/bin"
+	@# Create XDG Base Directory structure
+	@mkdir -p "$(HOME)/.local/share" "$(HOME)/.local/state"
+	@# Create vim cache directories (referenced in vimrc)
+	@mkdir -p "$(HOME)/.cache/vim/backup" "$(HOME)/.cache/vim/swap" "$(HOME)/.cache/vim/undo"
 endif
 	@# Set secure permissions for sensitive directories
 ifdef DRY_RUN
@@ -77,15 +65,15 @@ ifdef DRY_RUN
 	@echo "[DRY-RUN]   ln -sf $(PWD)/hushlogin $(HOME)/.hushlogin"
 	@echo "[DRY-RUN] Would run: git config --global core.excludesfile ~/.gitignore_global"
 else
-	@safe_link "$(PWD)/config/env.d/default.sh" "$(HOME)/.config/env.d/default.sh"; \
-	safe_link "$(PWD)/zshrc" "$(HOME)/.zshrc"; \
-	safe_link "$(PWD)/bashrc" "$(HOME)/.bashrc"; \
-	safe_link "$(PWD)/profile" "$(HOME)/.profile"; \
-	safe_link "$(PWD)/vimrc" "$(HOME)/.vimrc"; \
-	safe_link "$(PWD)/gitconfig" "$(HOME)/.gitconfig"; \
-	safe_link "$(PWD)/gitignore_global" "$(HOME)/.gitignore_global"; \
-	git config --global core.excludesfile "~/.gitignore_global" 2>/dev/null || true; \
-	safe_link "$(PWD)/hushlogin" "$(HOME)/.hushlogin"
+	@ln -sf "$(PWD)/config/env.d/default.sh" "$(HOME)/.config/env.d/default.sh"
+	@ln -sf "$(PWD)/zshrc" "$(HOME)/.zshrc"
+	@ln -sf "$(PWD)/bashrc" "$(HOME)/.bashrc"
+	@ln -sf "$(PWD)/profile" "$(HOME)/.profile"
+	@ln -sf "$(PWD)/vimrc" "$(HOME)/.vimrc"
+	@ln -sf "$(PWD)/gitconfig" "$(HOME)/.gitconfig"
+	@ln -sf "$(PWD)/gitignore_global" "$(HOME)/.gitignore_global"
+	@git config --global core.excludesfile "~/.gitignore_global" 2>/dev/null || true
+	@ln -sf "$(PWD)/hushlogin" "$(HOME)/.hushlogin"
 endif
 	@echo "Linking GPG configuration..."
 ifdef DRY_RUN

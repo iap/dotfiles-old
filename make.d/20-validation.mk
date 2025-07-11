@@ -55,12 +55,12 @@ validate:
 	fi
 	@test -f "$(HOME)/.ssh/config" || echo "WARNING: SSH config not found"
 	@echo "Checking for hardcoded paths..."
-	@! grep -r "/Users/" . --exclude-dir=.git --exclude="README.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded user paths found"; exit 1)
-	@! grep -r "/home/" . --exclude-dir=.git --exclude="README.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded home paths found"; exit 1)
-	@! grep -r "\.dotfiles" . --exclude-dir=.git --exclude="README.md" --exclude="*.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded .dotfiles references found"; exit 1)
+	@! grep -r "/Users/" . --exclude-dir=.git --exclude-dir=make.d --exclude="README.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded user paths found"; exit 1)
+	@! grep -r "/home/" . --exclude-dir=.git --exclude-dir=make.d --exclude="README.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded home paths found"; exit 1)
+	@! grep -r "\.dotfiles" . --exclude-dir=.git --exclude-dir=make.d --exclude="README.md" --exclude="*.md" --exclude="Makefile" || (echo "[ERROR] Hardcoded .dotfiles references found"; exit 1)
 	@echo "[OK] No hardcoded paths found"
 	@echo "Checking dynamic path resolution..."
-	@grep -q "$$(PWD)" Makefile && echo "[OK] Makefile uses dynamic paths" || (echo "[ERROR] Makefile should use \$$(PWD)"; exit 1)
+	@grep -q "(PWD)" make.d/*.mk && echo "[OK] Makefiles use dynamic paths" || (echo "[ERROR] Makefiles should use \$$(PWD)"; exit 1)
 	@grep -q "%h" gnupg/gpg-agent.conf && echo "[OK] GPG config uses placeholder" || (echo "[ERROR] GPG config should use %h placeholder"; exit 1)
 	@echo "Checking security settings..."
 	@grep -q "umask 077" config/env.d/default.sh && echo "[OK] Secure umask configured" || (echo "[ERROR] umask 077 required"; exit 1)
