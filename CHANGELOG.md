@@ -2,6 +2,13 @@
 
 All notable changes to this dotfiles configuration are documented here.
 
+## [2.0.3] - 2025-07-12
+
+### Fixed
+- Reorganize environment config: move working `default.local.sh` to `config/env.d/`
+- Fix hardcoded paths in documentation  
+- Add `-h` help flag to `gpg-ssh` tool
+
 ## [2.0.2] - 2025-07-11
 
 ### Intelligent Terminal Default Switching
