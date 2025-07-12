@@ -1,17 +1,26 @@
 # Bootstrap and setup operations
 # Part of modular Makefile system
+#
+# This module handles the core dotfiles installation and configuration:
+# - Creates required directory structure with proper permissions
+# - Links configuration files and scripts
+# - Processes templates with dynamic path substitution  
+# - Validates shell compatibility and provides recommendations
+# - Implements comprehensive error handling and logging
 
-# Path variables for maintainability
-CONFIG_DIR := $(HOME)/.config
-ENV_DIR := $(CONFIG_DIR)/env.d
-BACKUP_DIR := $(HOME)/.backup
-LOGS_DIR := $(HOME)/.logs
-CACHE_DIR := $(HOME)/.cache
-LOCAL_DIR := $(HOME)/.local
-GNUPG_DIR := $(HOME)/.gnupg
-SSH_DIR := $(HOME)/.ssh
-BIN_DIR := $(HOME)/bin
-VIM_CACHE_DIR := $(CACHE_DIR)/vim
+# Path variables for maintainability and consistency
+# These centralized variables eliminate hardcoded paths and make the
+# system easier to maintain and modify
+CONFIG_DIR := $(HOME)/.config          # XDG config directory
+ENV_DIR := $(CONFIG_DIR)/env.d          # Environment configuration
+BACKUP_DIR := $(HOME)/.backup           # Backup storage (secure: 700)
+LOGS_DIR := $(HOME)/.logs               # System logs (secure: 700)
+CACHE_DIR := $(HOME)/.cache             # Temporary cache data
+LOCAL_DIR := $(HOME)/.local             # XDG local directory
+GNUPG_DIR := $(HOME)/.gnupg             # GPG configuration (secure: 700)
+SSH_DIR := $(HOME)/.ssh                 # SSH configuration (secure: 700)
+BIN_DIR := $(HOME)/bin                  # User scripts and utilities
+VIM_CACHE_DIR := $(CACHE_DIR)/vim       # Vim-specific cache directories
 
 # Error handling function for critical operations
 define check_result
@@ -224,7 +233,12 @@ check-shell-defaults:
 			REASON="modern features available"; \
 		else \
 			RECOMMENDED="bash"; \
-			REASON="maximum compatibility"; \
+			REASON="maximum compatibility (zsh not installed)"; \
+			echo "[INFO] zsh not found. Install with:"; \
+			echo "  Ubuntu/Debian: sudo apt install zsh"; \
+			echo "  CentOS/RHEL: sudo yum install zsh"; \
+			echo "  Arch: sudo pacman -S zsh"; \
+			echo ""; \
 		fi; \
 	else \
 		RECOMMENDED="bash"; \
