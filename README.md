@@ -8,53 +8,67 @@ Cross-platform development environment configuration with modular architecture, 
 
 This dotfiles setup follows POSIX-compatible standards and supports both Zsh and Bash shells with shared environment configuration. Includes MacPorts package manager integration on macOS for streamlined development tool installation.
 
-## Structure
+## 📂 Project Structure
 
 ```
 .dotfiles/
-├── Makefile                # Main Makefile (modular architecture)
-├── make.d/                 # Modular Makefile components
-│   ├── 05-safety.mk       # Shell safety and reliability
-│   ├── 10-help.mk         # Help and information
-│   ├── 20-validation.mk   # System validation
-│   ├── 30-permissions.mk  # Permission management
-│   ├── 40-setup.mk        # Bootstrap and setup
-│   └── 50-maintenance.mk  # Cleanup and backup
-├── README.md              # Documentation
-├── CHANGELOG.md           # Version history
-├── VERSION                # Current version
-├── bashrc                 # Bash shell configuration
-├── bin/                   # Essential utility scripts
-│   ├── git-provider       # Multi-provider Git management
-│   ├── gpg-setup          # GPG key management
-│   ├── gpg-ssh            # GPG SSH authentication
-│   ├── pinentry-fallback  # Cross-platform pinentry (enhanced)
-│   └── ssh-keygen-secure  # Secure SSH key generation
+├── Makefile                   # Main Makefile (modular architecture)
+├── make.d/                    # Modular Makefile components
+│   ├── 05-safety.mk          # Safety and reliability
+│   ├── 10-help.mk            # Help and information
+│   ├── 20-validation.mk      # Validation scripts
+│   ├── 30-permissions.mk     # Permission management
+│   ├── 40-setup.mk           # Environment setup
+│   ├── 50-maintenance.mk     # Cleanup and maintenance tasks
+│   └── 60-testing.mk         # Testing utilities
+├── README.md                 # Main documentation
+├── CHANGELOG.md              # Version history
+├── TODO.md                   # Upcoming tasks
+├── VERSION                   # Current version marker
+├── .editorconfig             # Editor configuration
+├── .gitignore                # Git ignore rules
+├── .logs/                    # Logs
+├── bashrc                    # Bash configuration
+├── bin/                      # Utility scripts
+│   ├── fix-md031.sh         # Markdown fixer
+│   ├── git-provider         # Multi-provider Git management
+│   ├── gpg-setup            # GPG key management tools
+│   ├── gpg-ssh              # GPG SSH tools
+│   ├── pinentry-fallback    # Cross-platform pinentry
+│   ├── pinentry-fallback-debug # Pinentry debug mode
+│   └── ssh-keygen-secure    # Secure SSH key generation
 ├── config/
 │   └── env.d/
-│       └── default.sh     # Central environment configuration
-├── gitconfig              # Git configuration
-├── gitignore_global       # Global Git ignore rules
-├── gnupg/                 # GPG configuration
-│   ├── gpg-agent.conf.template # GPG agent template (dynamic paths)
-│   └── gpg.conf           # GPG client configuration
-├── hushlogin              # Suppress login messages
-├── profile                # POSIX shell profile
-├── shell.d/               # Shared shell configuration
-│   ├── aliases.sh         # Common aliases for bash/zsh
-│   └── env.sh             # Shared environment loader
+│       ├── default.local.sh # Local environment overrides
+│       └── default.sh       # Base environment configuration
+├── docs/
+│   ├── env-setup-guide.md   # Environment setup guide
+│   ├── pinentry-troubleshooting.md # Pinentry troubleshooting
+│   └── terminal-configuration.md # Terminal configuration
+├── gitconfig                 # Git global configuration
+├── gitignore_global          # Global gitignore patterns
+├── gnupg/
+│   ├── gpg-agent.conf.template # GPG agent template
+│   └── gpg.conf             # GPG configuration
+├── hooks/
+│   └── pre-commit           # Pre-commit hook
+├── hushlogin                # Supress login messages
+├── profile                  # Shell profile
+├── shell.d/
+│   ├── aliases.sh           # Shell aliases
+│   └── env.sh               # Environment variable loader
 ├── ssh/
-│   └── config             # SSH client configuration
-├── template/              # Local configuration templates
-│   ├── config.local       # SSH host configuration template
-│   ├── default.local.sh   # Environment variable overrides template
-│   ├── forward.local      # Email forwarding template
-│   ├── gitconfig.local    # Git user settings template
-│   └── profile.local      # POSIX shell profile overrides template
-├── vimrc                  # Vim editor configuration
-└── zshrc                  # Zsh shell configuration
+│   └── config               # SSH configuration
+├── template/
+│   ├── config.local         # SSH config template
+│   ├── default.local.sh     # Local env overrides template
+│   ├── forward.local        # Email forward template
+│   ├── gitconfig.local      # Git local config template
+│   └── profile.local        # Local profile template
+├── vimrc                    # Vim configuration
+└── zshrc                    # Zsh configuration
 
-11 directories, 41 files
+13 directories, 45 files
 ```
 
 ## Installation
