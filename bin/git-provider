@@ -389,15 +389,38 @@ show_status() {
       echo "  URL: $url"
       echo "  SSH Key: ${key:-default}"
       
-      # Check network before attempting ls-remote
+      # Check network before attempting remote operations
       if [ "${OFFLINE_MODE:-}" = "1" ] || ! check_network; then
         echo "  Status: offline (network unavailable)"
+        echo "  Branches: Unable to check (offline)"
       else
-        # Check if remote exists without authentication
-        if git remote get-url "$provider" >/dev/null 2>&1; then
-          echo "  Status: configured (use 'git ls-remote $provider' to test connectivity)"
+        # Check if remote exists and get branch info
+        if git remote get-url "$provider" > /dev/null 2>&1; then
+          echo "  Status: configured"
+          
+          # Try to get branch information (with timeout protection)
+          if timeout 10 git ls-remote --heads "$provider" > /dev/null 2>&1; then
+            branch_count=$(timeout 10 git ls-remote --heads "$provider" 2>/dev/null | wc -l | xargs)
+            if [ "$branch_count" -gt 0 ]; then
+              echo "  Branches: $branch_count remote branches available"
+              # Show a few branch names if there aren't too many
+              if [ "$branch_count" -le 5 ]; then
+                timeout 10 git ls-remote --heads "$provider" 2>/dev/null | while read -r sha ref; do
+                  branch_name=$(echo "$ref" | sed 's|refs/heads/||')
+                  echo "    - $branch_name"
+                done
+              else
+                echo "    (use 'git ls-remote --heads $provider' to see all branches)"
+              fi
+            else
+              echo "  Branches: No branches found"
+            fi
+          else
+            echo "  Branches: Unable to check (connection timeout or auth required)"
+          fi
         else
           echo "  Status: remote not found"
+          echo "  Branches: N/A"
         fi
       fi
       echo ""
