@@ -398,25 +398,47 @@ show_status() {
         if git remote get-url "$provider" > /dev/null 2>&1; then
           echo "  Status: configured"
           
-          # Try to get branch information (with timeout protection)
-          if timeout 10 git ls-remote --heads "$provider" > /dev/null 2>&1; then
-            branch_count=$(timeout 10 git ls-remote --heads "$provider" 2>/dev/null | wc -l | xargs)
-            if [ "$branch_count" -gt 0 ]; then
-              echo "  Branches: $branch_count remote branches available"
-              # Show a few branch names if there aren't too many
-              if [ "$branch_count" -le 5 ]; then
-                timeout 10 git ls-remote --heads "$provider" 2>/dev/null | while read -r sha ref; do
-                  branch_name=$(echo "$ref" | sed 's|refs/heads/||')
-                  echo "    - $branch_name"
-                done
-              else
-                echo "    (use 'git ls-remote --heads $provider' to see all branches)"
-              fi
+          # Try to get branch information 
+          # Use local branch tracking info instead of remote queries for better performance
+          local_branches=$(git branch -r | grep "$provider/" | wc -l | xargs)
+          
+          if [ "$local_branches" -gt 0 ]; then
+            echo "  Branches: $local_branches tracked branches (from last fetch)"
+            # Show branch names if there aren't too many
+            if [ "$local_branches" -le 5 ]; then
+              git branch -r | grep "$provider/" | while read -r branch; do
+                branch_name=$(echo "$branch" | sed "s|$provider/||" | xargs)
+                echo "    - $branch_name"
+              done
             else
-              echo "  Branches: No branches found"
+              echo "    (use 'git branch -r | grep $provider' to see all branches)"
             fi
           else
-            echo "  Branches: Unable to check (connection timeout or auth required)"
+            # Fallback: try a quick remote check (without hanging)
+            echo "  Branches: Checking remote..."
+            if git ls-remote --heads "$provider" >/dev/null 2>&1 &
+            then
+              # Process started successfully, give it a moment
+              pid=$!
+              sleep 3
+              if kill -0 "$pid" 2>/dev/null; then
+                # Still running after 3 seconds, kill it
+                kill "$pid" 2>/dev/null
+                wait "$pid" 2>/dev/null
+                echo "  Branches: Unable to check (slow connection - run 'git fetch $provider' to update)"
+              else
+                # Completed quickly
+                wait "$pid"
+                if [ $? -eq 0 ]; then
+                  branch_count=$(git ls-remote --heads "$provider" 2>/dev/null | wc -l | xargs)
+                  echo "  Branches: $branch_count remote branches available"
+                else
+                  echo "  Branches: Unable to check (authentication or connection issue)"
+                fi
+              fi
+            else
+              echo "  Branches: Unable to check (git ls-remote failed)"
+            fi
           fi
         else
           echo "  Status: remote not found"
