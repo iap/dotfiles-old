@@ -1,6 +1,26 @@
 # Bootstrap and setup operations
 # Part of modular Makefile system
 
+# Path variables for maintainability
+CONFIG_DIR := $(HOME)/.config
+ENV_DIR := $(CONFIG_DIR)/env.d
+BACKUP_DIR := $(HOME)/.backup
+LOGS_DIR := $(HOME)/.logs
+CACHE_DIR := $(HOME)/.cache
+LOCAL_DIR := $(HOME)/.local
+GNUPG_DIR := $(HOME)/.gnupg
+SSH_DIR := $(HOME)/.ssh
+BIN_DIR := $(HOME)/bin
+VIM_CACHE_DIR := $(CACHE_DIR)/vim
+
+# Error handling function for critical operations
+define check_result
+	@if [ $$? -ne 0 ]; then \
+		echo "[ERROR] Failed: $(1)"; \
+		exit 1; \
+	fi
+endef
+
 .PHONY: bootstrap link-dotfiles setup-templates check-shell-defaults
 
 # Full environment setup - corrected dependency order
@@ -22,36 +42,32 @@ ifdef DRY_RUN
 else
 	@chmod 711 "$(HOME)"  # Home directory baseline
 endif
-	@echo "Creating required directories with proper permissions..."
+	@echo "[INFO] Creating required directories with proper permissions..."
 ifdef DRY_RUN
 	@echo "[DRY-RUN] Would create directories:"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/.config/env.d"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/.logs $(HOME)/.cache $(HOME)/Projects"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/.backup/system $(HOME)/.backup/projects $(HOME)/.backup/gpg $(HOME)/.backup/logs"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/bin"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/.local/share $(HOME)/.local/state"
-	@echo "[DRY-RUN]   mkdir -p $(HOME)/.cache/vim/backup $(HOME)/.cache/vim/swap $(HOME)/.cache/vim/undo"
-else
-	@mkdir -p "$(HOME)/.config/env.d"
-	@mkdir -p "$(HOME)/.logs" "$(HOME)/.cache" "$(HOME)/Projects"
-	@mkdir -p "$(HOME)/.backup/system" "$(HOME)/.backup/projects" "$(HOME)/.backup/gpg" "$(HOME)/.backup/logs"
-	@mkdir -p "$(HOME)/bin"
-	@# Create XDG Base Directory structure
-	@mkdir -p "$(HOME)/.local/share" "$(HOME)/.local/state"
-	@# Create vim cache directories (referenced in vimrc)
-	@mkdir -p "$(HOME)/.cache/vim/backup" "$(HOME)/.cache/vim/swap" "$(HOME)/.cache/vim/undo"
-endif
-	@# Set secure permissions for sensitive directories
-ifdef DRY_RUN
+	@echo "[DRY-RUN]   mkdir -p $(ENV_DIR)"
+	@echo "[DRY-RUN]   mkdir -p $(LOGS_DIR) $(CACHE_DIR) $(HOME)/Projects"
+	@echo "[DRY-RUN]   mkdir -p $(BACKUP_DIR)/{system,projects,gpg,logs}"
+	@echo "[DRY-RUN]   mkdir -p $(BIN_DIR)"
+	@echo "[DRY-RUN]   mkdir -p $(LOCAL_DIR)/{share,state}"
+	@echo "[DRY-RUN]   mkdir -p $(VIM_CACHE_DIR)/{backup,swap,undo}"
 	@echo "[DRY-RUN] Would set directory permissions:"
-	@echo "[DRY-RUN]   chmod 700 $(HOME)/.backup $(HOME)/.logs"
-	@echo "[DRY-RUN]   chmod 711 $(HOME)/bin"
-	@echo "[DRY-RUN]   chmod 755 $(HOME)/.local $(HOME)/.local/share $(HOME)/.local/state"
+	@echo "[DRY-RUN]   chmod 700 $(BACKUP_DIR) $(LOGS_DIR)"
+	@echo "[DRY-RUN]   chmod 711 $(BIN_DIR)"
+	@echo "[DRY-RUN]   chmod 755 $(LOCAL_DIR) $(LOCAL_DIR)/share $(LOCAL_DIR)/state"
 else
-	@chmod 700 "$(HOME)/.backup" "$(HOME)/.logs"
-	@chmod 711 "$(HOME)/bin"  # Match home directory for consistency
-	@chmod 755 "$(HOME)/.local"  # XDG directories should be accessible
-	@chmod 755 "$(HOME)/.local/share" "$(HOME)/.local/state"
+	@# Create all directories in optimized batches
+	@mkdir -p "$(ENV_DIR)" || { echo "[ERROR] Failed to create $(ENV_DIR)"; exit 1; }
+	@mkdir -p "$(LOGS_DIR)" "$(CACHE_DIR)" "$(HOME)/Projects" || { echo "[ERROR] Failed to create core directories"; exit 1; }
+	@mkdir -p "$(BACKUP_DIR)/system" "$(BACKUP_DIR)/projects" "$(BACKUP_DIR)/gpg" "$(BACKUP_DIR)/logs" || { echo "[ERROR] Failed to create backup directories"; exit 1; }
+	@mkdir -p "$(BIN_DIR)" || { echo "[ERROR] Failed to create $(BIN_DIR)"; exit 1; }
+	@mkdir -p "$(LOCAL_DIR)/share" "$(LOCAL_DIR)/state" || { echo "[ERROR] Failed to create XDG directories"; exit 1; }
+	@mkdir -p "$(VIM_CACHE_DIR)/backup" "$(VIM_CACHE_DIR)/swap" "$(VIM_CACHE_DIR)/undo" || { echo "[ERROR] Failed to create vim cache directories"; exit 1; }
+	@# Set secure permissions with error checking
+	@chmod 700 "$(BACKUP_DIR)" "$(LOGS_DIR)" || { echo "[ERROR] Failed to set secure permissions"; exit 1; }
+	@chmod 711 "$(BIN_DIR)" || { echo "[ERROR] Failed to set bin permissions"; exit 1; }
+	@chmod 755 "$(LOCAL_DIR)" "$(LOCAL_DIR)/share" "$(LOCAL_DIR)/state" || { echo "[ERROR] Failed to set XDG permissions"; exit 1; }
+	@echo "[INFO] Directory structure created successfully"
 endif
 ifdef DRY_RUN
 	@echo "[DRY-RUN] Would create symlinks:"
@@ -75,41 +91,47 @@ else
 	@git config --global core.excludesfile "~/.gitignore_global" 2>/dev/null || true
 	@ln -sf "$(PWD)/hushlogin" "$(HOME)/.hushlogin"
 endif
-	@echo "Linking GPG configuration..."
+	@echo "[INFO] Linking GPG configuration..."
 ifdef DRY_RUN
-	@echo "[DRY-RUN] Would create GPG directory: mkdir -p $(HOME)/.gnupg"
-	@echo "[DRY-RUN] Would set GPG permissions: chmod 700 $(HOME)/.gnupg"
+	@echo "[DRY-RUN] Would create GPG directory: mkdir -p $(GNUPG_DIR)"
+	@echo "[DRY-RUN] Would set GPG permissions: chmod 700 $(GNUPG_DIR)"
 	@echo "[DRY-RUN] Would create GPG symlinks:"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/gnupg/gpg.conf $(HOME)/.gnupg/gpg.conf"
-	@echo "[DRY-RUN] Would process template: $(PWD)/gnupg/gpg-agent.conf.template -> $(HOME)/.gnupg/gpg-agent.conf"
+	@echo "[DRY-RUN]   ln -sf $(PWD)/gnupg/gpg.conf $(GNUPG_DIR)/gpg.conf"
+	@echo "[DRY-RUN] Would process template: $(PWD)/gnupg/gpg-agent.conf.template -> $(GNUPG_DIR)/gpg-agent.conf"
 	@echo "[DRY-RUN] Would replace %h with $(HOME) in template"
-	@echo "[DRY-RUN] Would set GPG file permissions: chmod 600 $(HOME)/.gnupg/gpg.conf $(HOME)/.gnupg/gpg-agent.conf"
+	@echo "[DRY-RUN] Would set GPG file permissions: chmod 600 $(GNUPG_DIR)/{gpg.conf,gpg-agent.conf}"
 else
-	@mkdir -p "$(HOME)/.gnupg"
-	@chmod 700 "$(HOME)/.gnupg"
-	@ln -sf "$(PWD)/gnupg/gpg.conf" "$(HOME)/.gnupg/gpg.conf"
-	@# Process gpg-agent.conf template with dynamic path substitution
-	@sed 's|%h|$(HOME)|g' "$(PWD)/gnupg/gpg-agent.conf.template" > "$(HOME)/.gnupg/gpg-agent.conf"
-	@echo "Processed GPG agent template: %h -> $(HOME)"
-	@chmod 600 "$(HOME)/.gnupg/gpg.conf" "$(HOME)/.gnupg/gpg-agent.conf"
+	@# Create GPG directory with secure permissions
+	@mkdir -p "$(GNUPG_DIR)" || { echo "[ERROR] Failed to create $(GNUPG_DIR)"; exit 1; }
+	@chmod 700 "$(GNUPG_DIR)" || { echo "[ERROR] Failed to set GPG directory permissions"; exit 1; }
+	@# Link GPG configuration file
+	@ln -sf "$(PWD)/gnupg/gpg.conf" "$(GNUPG_DIR)/gpg.conf" || { echo "[ERROR] Failed to link gpg.conf"; exit 1; }
+	@# Process gpg-agent.conf template with dynamic path substitution and validation
+	@if [ ! -f "$(PWD)/gnupg/gpg-agent.conf.template" ]; then echo "[ERROR] Template $(PWD)/gnupg/gpg-agent.conf.template not found"; exit 1; fi
+	@if ! grep -q "%h" "$(PWD)/gnupg/gpg-agent.conf.template"; then echo "[ERROR] Template missing %h placeholder"; exit 1; fi
+	@sed 's|%h|$(HOME)|g' "$(PWD)/gnupg/gpg-agent.conf.template" > "$(GNUPG_DIR)/gpg-agent.conf" || { echo "[ERROR] Failed to process GPG agent template"; exit 1; }
+	@chmod 600 "$(GNUPG_DIR)/gpg.conf" "$(GNUPG_DIR)/gpg-agent.conf" || { echo "[ERROR] Failed to set GPG file permissions"; exit 1; }
+	@echo "[INFO] GPG configuration linked successfully"
 endif
-	@echo "Linking SSH configuration..."
+	@echo "[INFO] Linking SSH configuration..."
 ifdef DRY_RUN
-	@echo "[DRY-RUN] Would create SSH directory: mkdir -p $(HOME)/.ssh"
-	@echo "[DRY-RUN] Would set SSH permissions: chmod 700 $(HOME)/.ssh"
+	@echo "[DRY-RUN] Would create SSH directory: mkdir -p $(SSH_DIR)"
+	@echo "[DRY-RUN] Would set SSH permissions: chmod 700 $(SSH_DIR)"
 	@echo "[DRY-RUN] Would create SSH symlinks:"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/ssh/config $(HOME)/.ssh/config"
-	@echo "[DRY-RUN] Would set SSH file permissions: chmod 600 $(HOME)/.ssh/config"
+	@echo "[DRY-RUN]   ln -sf $(PWD)/ssh/config $(SSH_DIR)/config"
+	@echo "[DRY-RUN] Would set SSH file permissions: chmod 600 $(SSH_DIR)/config"
 	@echo "[DRY-RUN] Would create SSH files:"
-	@echo "[DRY-RUN]   touch $(HOME)/.ssh/known_hosts $(HOME)/.ssh/known_hosts_local"
-	@echo "[DRY-RUN] Would set SSH file permissions: chmod 600 $(HOME)/.ssh/known_hosts $(HOME)/.ssh/known_hosts_local"
+	@echo "[DRY-RUN]   touch $(SSH_DIR)/known_hosts $(SSH_DIR)/known_hosts_local"
+	@echo "[DRY-RUN] Would set SSH file permissions: chmod 600 $(SSH_DIR)/{known_hosts,known_hosts_local}"
 else
-	@mkdir -p "$(HOME)/.ssh"
-	@chmod 700 "$(HOME)/.ssh"
-	@ln -sf "$(PWD)/ssh/config" "$(HOME)/.ssh/config"
-	@chmod 600 "$(HOME)/.ssh/config"
-	@touch "$(HOME)/.ssh/known_hosts" "$(HOME)/.ssh/known_hosts_local"
-	@chmod 600 "$(HOME)/.ssh/known_hosts" "$(HOME)/.ssh/known_hosts_local"
+	@# Create SSH directory with secure permissions
+	@mkdir -p "$(SSH_DIR)" || { echo "[ERROR] Failed to create $(SSH_DIR)"; exit 1; }
+	@chmod 700 "$(SSH_DIR)" || { echo "[ERROR] Failed to set SSH directory permissions"; exit 1; }
+	@# Link SSH configuration and create required files
+	@ln -sf "$(PWD)/ssh/config" "$(SSH_DIR)/config" || { echo "[ERROR] Failed to link SSH config"; exit 1; }
+	@touch "$(SSH_DIR)/known_hosts" "$(SSH_DIR)/known_hosts_local" || { echo "[ERROR] Failed to create SSH known_hosts files"; exit 1; }
+	@chmod 600 "$(SSH_DIR)/config" "$(SSH_DIR)/known_hosts" "$(SSH_DIR)/known_hosts_local" || { echo "[ERROR] Failed to set SSH file permissions"; exit 1; }
+	@echo "[INFO] SSH configuration linked successfully"
 endif
 	@echo "Linking bin scripts with proper permissions..."
 ifdef DRY_RUN
