@@ -123,14 +123,15 @@ ifdef DRY_RUN
 else
 	@# Ensure source scripts are executable
 	@chmod 755 "$(PWD)/bin/pinentry-"* "$(PWD)/bin/ssh-keygen-secure" "$(PWD)/bin/gpg-setup" "$(PWD)/bin/git-provider" "$(PWD)/bin/gpg-ssh" 2>/dev/null || true
-	@# Create symlinks with 711 permissions to match bin directory
-	@old_umask=$$(umask); umask 066; \
-		ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"; \
-		ln -sf "$(PWD)/bin/ssh-keygen-secure" "$(HOME)/bin/ssh-keygen-secure"; \
-		ln -sf "$(PWD)/bin/git-provider" "$(HOME)/bin/git-provider"; \
-		ln -sf "$(PWD)/bin/gpg-setup" "$(HOME)/bin/gpg-setup"; \
-		ln -sf "$(PWD)/bin/gpg-ssh" "$(HOME)/bin/gpg-ssh"; \
-		umask $$old_umask
+	@# Create symlinks with controlled umask for security
+	@OLD_UMASK=$$(umask); \
+	umask 066; \
+	ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"; \
+	ln -sf "$(PWD)/bin/ssh-keygen-secure" "$(HOME)/bin/ssh-keygen-secure"; \
+	ln -sf "$(PWD)/bin/git-provider" "$(HOME)/bin/git-provider"; \
+	ln -sf "$(PWD)/bin/gpg-setup" "$(HOME)/bin/gpg-setup"; \
+	ln -sf "$(PWD)/bin/gpg-ssh" "$(HOME)/bin/gpg-ssh"; \
+	umask $$OLD_UMASK
 endif
 	@echo "Dotfiles linked successfully"
 
