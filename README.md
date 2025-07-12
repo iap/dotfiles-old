@@ -54,7 +54,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── vimrc                  # Vim editor configuration
 └── zshrc                  # Zsh shell configuration
 
-9 directories, 27 files
+11 directories, 41 files
 ```
 
 ## Installation
