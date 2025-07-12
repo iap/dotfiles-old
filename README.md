@@ -30,7 +30,6 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── .logs/                    # Logs
 ├── bashrc                    # Bash configuration
 ├── bin/                      # Utility scripts
-│   ├── fix-md031.sh         # Markdown fixer
 │   ├── git-provider         # Multi-provider Git management
 │   ├── gpg-setup            # GPG key management tools
 │   ├── gpg-ssh              # GPG SSH tools
@@ -68,7 +67,7 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ├── vimrc                    # Vim configuration
 └── zshrc                    # Zsh configuration
 
-13 directories, 45 files
+13 directories, 44 files
 ```
 
 ## Installation
