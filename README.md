@@ -1,8 +1,8 @@
 # Dotfiles
 
-> **Version**: 2.0.3 | **Last Updated**: 2025-07-12T14:40:00Z | **Status**: ✅ Stable
+> **Version**: 2.1.0 | **Last Updated**: 2025-07-12T15:59:00Z | **Status**: ✅ Stable
 
-Minimal, secure, and cross-platform development environment configuration with modular architecture and comprehensive safety features.
+Cross-platform development environment configuration with modular architecture, comprehensive testing, and optimization features.
 
 ## Overview
 
@@ -156,7 +156,11 @@ Run `make help` to see available targets:
 - `make clean-cache` - Clear cache directory
 - `make backup` - Backup configuration
 
-### Safety & Testing
+### Testing & Optimization
+- `make test` - Run comprehensive system tests
+- `make test-validation` - Test system validation functions
+- `make test-permissions` - Test directory permission validation
+- `make test-gpg-template` - Test GPG template processing
 - `make test-safety` - Test safety and reliability features
 - `make help-safety` - Show safety feature documentation
 - All targets support `DRY_RUN=1` for safe preview
