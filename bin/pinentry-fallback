@@ -1,13 +1,15 @@
 #!/bin/sh
-# Cross-platform pinentry fallback script
-# Tries platform-specific pinentry programs with fallbacks
+# Enhanced cross-platform pinentry fallback script
+# Ensures pinentry appears in the active terminal window
+# Version: 2.1 - Enhanced TTY binding and terminal detection
 
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [pinentry-options]
 
-Cross-platform pinentry fallback script for GPG.
-Automatically selects the best available pinentry program.
+Enhanced cross-platform pinentry fallback script for GPG.
+Automatically selects the best available pinentry program and
+ensures it appears in the active terminal window.
 
 Priority order:
   1. Terminal-based: pinentry-curses, pinentry-tty
@@ -24,6 +26,7 @@ Examples:
   $(basename "$0") --version  # Show pinentry version
 
 Note: This script is typically called by GPG agent, not directly.
+      Enhanced with TTY binding to prevent spawning in wrong terminal.
 EOF
 }
 
@@ -37,63 +40,199 @@ for arg in "$@"; do
   esac
 done
 
-# Log function for debugging
+# Enhanced logging function
 log_debug() {
-  echo "$(date): $*" >> "$HOME/.logs/pinentry.log" 2>/dev/null || true
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] pinentry-fallback: $*" >> "$HOME/.logs/pinentry.log" 2>/dev/null || true
 }
 
-# Terminal-first fallbacks - prioritize text-based for servers
-# Priority order: terminal-only > terminal-capable > GUI-only
-log_debug "pinentry-fallback: Starting with args: $*"
+# Create logs directory if needed
+mkdir -p "$HOME/.logs" 2>/dev/null || true
 
-# Check if we're in a headless environment
-if [ -z "$DISPLAY" ] && [ -z "$SSH_TTY" ] && [ "$TERM" = "dumb" ]; then
-  log_debug "Headless environment detected - using terminal-only pinentry"
-  HEADLESS_MODE=1
-else
-  HEADLESS_MODE=0
+# Enhanced terminal detection and TTY validation
+log_debug "Starting with args: $*"
+log_debug "Environment: TERM=$TERM, DISPLAY=${DISPLAY:-unset}, SSH_TTY=${SSH_TTY:-unset}"
+log_debug "TTY info: GPG_TTY=${GPG_TTY:-unset}, tty=$(tty 2>/dev/null || echo 'none')"
+
+# Validate and set up TTY for pinentry
+setup_tty() {
+  # Ensure GPG_TTY is set to current TTY
+  if [ -z "$GPG_TTY" ]; then
+    if TTY_DEVICE=$(tty 2>/dev/null); then
+      export GPG_TTY="$TTY_DEVICE"
+      log_debug "Set GPG_TTY to current tty: $GPG_TTY"
+    else
+      log_debug "Warning: Could not determine current TTY"
+    fi
+  else
+    log_debug "Using existing GPG_TTY: $GPG_TTY"
+  fi
+  
+  # Validate TTY is accessible
+  if [ -n "$GPG_TTY" ] && [ -c "$GPG_TTY" ]; then
+    log_debug "TTY validation passed: $GPG_TTY is accessible"
+    return 0
+  else
+    log_debug "TTY validation failed: $GPG_TTY not accessible or not set"
+    return 1
+  fi
+}
+
+# Enhanced environment detection
+detect_environment() {
+  # Check for headless/server environment
+  if [ -z "$DISPLAY" ] && [ "$TERM" = "dumb" ]; then
+    log_debug "Headless environment detected (no DISPLAY, TERM=dumb)"
+    echo "headless"
+  elif [ -n "$SSH_TTY" ] || [ -n "$SSH_CONNECTION" ]; then
+    log_debug "SSH session detected"
+    echo "ssh"
+  elif [ -n "$DISPLAY" ]; then
+    log_debug "GUI environment detected (DISPLAY set)"
+    echo "gui"
+  else
+    log_debug "Terminal environment detected"
+    echo "terminal"
+  fi
+}
+
+# Set up TTY for better terminal binding
+setup_tty
+ENV_TYPE=$(detect_environment)
+log_debug "Environment type: $ENV_TYPE"
+
+# Enhanced pinentry selection based on environment
+select_pinentry() {
+  case "$ENV_TYPE" in
+    "headless")
+      # Headless: only terminal pinentry
+      for cmd in pinentry-curses pinentry-tty; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected terminal pinentry for headless: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      ;;
+    "ssh")
+      # SSH: prefer terminal, allow GUI as fallback if forwarded
+      for cmd in pinentry-curses pinentry-tty; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected terminal pinentry for SSH: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      # If X11 forwarding is available, try GUI
+      if [ -n "$DISPLAY" ]; then
+        for cmd in pinentry-gtk-2 pinentry-gtk pinentry-qt; do
+          if command -v "$cmd" >/dev/null 2>&1; then
+            log_debug "Selected GUI pinentry for SSH with X11: $cmd"
+            echo "$cmd"
+            return 0
+          fi
+        done
+      fi
+      ;;
+    "gui")
+      # GUI environment: prefer GUI, fallback to terminal
+      # Check MacPorts app bundle first
+      if [ -x "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac" ]; then
+        log_debug "Selected MacPorts GUI pinentry: /Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac"
+        echo "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac"
+        return 0
+      fi
+      # Then check standard PATH locations
+      for cmd in pinentry-mac pinentry-gtk-2 pinentry-gtk pinentry-qt pinentry-qt4; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected GUI pinentry: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      # Fallback to terminal
+      for cmd in pinentry-curses pinentry-tty; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected terminal pinentry as GUI fallback: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      ;;
+    "terminal")
+      # Terminal environment: prefer terminal, allow GUI if available
+      for cmd in pinentry-curses pinentry-tty; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected terminal pinentry: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      for cmd in pinentry-mac pinentry-gtk-2 pinentry-gtk pinentry-qt; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+          log_debug "Selected GUI pinentry as terminal fallback: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      ;;
+  esac
+  
+  return 1
+}
+
+# Try to find appropriate pinentry
+PINENTRY_CMD=$(select_pinentry)
+if [ $? -eq 0 ] && [ -n "$PINENTRY_CMD" ]; then
+  log_debug "Final pinentry selection: $PINENTRY_CMD"
+  # Execute with proper TTY binding
+  exec "$PINENTRY_CMD" "$@"
 fi
 
-# Priority 1: Terminal-only pinentry (works on all servers)
-for pinentry_cmd in pinentry-curses pinentry-tty; do
-  if command -v "$pinentry_cmd" >/dev/null 2>&1; then
-    log_debug "Using terminal pinentry: $pinentry_cmd"
-    exec "$pinentry_cmd" "$@"
+# MacPorts and absolute path fallbacks
+log_debug "Trying MacPorts and absolute path fallbacks"
+for pinentry_path in \
+  /opt/local/bin/pinentry-curses \
+  /opt/local/bin/pinentry-gtk2 \
+  /opt/local/bin/pinentry-mac \
+  /usr/local/bin/pinentry-curses \
+  /usr/local/bin/pinentry-mac \
+  /usr/bin/pinentry-curses \
+  /usr/bin/pinentry-gtk-2; do
+  
+  if [ -x "$pinentry_path" ]; then
+    log_debug "Found pinentry at absolute path: $pinentry_path"
+    exec "$pinentry_path" "$@"
   fi
 done
 
-# Priority 2: GUI pinentry (only if not headless)
-if [ "$HEADLESS_MODE" = "0" ]; then
-  for pinentry_cmd in pinentry-gtk-2 pinentry-gtk pinentry-qt pinentry-qt4 pinentry-mac; do
-    if command -v "$pinentry_cmd" >/dev/null 2>&1; then
-      log_debug "Using GUI pinentry: $pinentry_cmd"
-      exec "$pinentry_cmd" "$@"
-    fi
-  done
-fi
+# Final error with enhanced debugging
+log_debug "FATAL: No pinentry program found anywhere"
+log_debug "Environment debug info:"
+log_debug "  TERM=$TERM"
+log_debug "  DISPLAY=${DISPLAY:-unset}"
+log_debug "  SSH_TTY=${SSH_TTY:-unset}"
+log_debug "  GPG_TTY=${GPG_TTY:-unset}"
+log_debug "  PATH=$PATH"
 
-# MacPorts alternatives (optional)
-for pinentry_cmd in /opt/local/bin/pinentry-curses /opt/local/bin/pinentry-gtk2; do
-  [ -x "$pinentry_cmd" ] && exec "$pinentry_cmd" "$@"
-done
-
-# Final fallback
-log_debug "No pinentry program found - providing installation guidance"
-echo "ERROR: No usable pinentry program found" 1>&2
-echo "Please install a pinentry program:" 1>&2
-echo "" 1>&2
-echo "For servers (headless/terminal):" 1>&2
-echo "  Ubuntu/Debian: sudo apt-get install pinentry-curses" 1>&2
-echo "  CentOS/RHEL:   sudo yum install pinentry-curses" 1>&2
-echo "  Alpine:        sudo apk add pinentry-curses" 1>&2
-echo "" 1>&2
-echo "For desktop environments:" 1>&2
-echo "  macOS:         sudo port install pinentry-mac" 1>&2
-echo "  Linux GUI:     sudo apt-get install pinentry-gtk2" 1>&2
-echo "" 1>&2
-echo "Environment info for debugging:" 1>&2
-echo "  TERM=$TERM" 1>&2
-echo "  DISPLAY=$DISPLAY" 1>&2
-echo "  SSH_TTY=$SSH_TTY" 1>&2
-echo "  PATH=$PATH" 1>&2
+echo "ERROR: No usable pinentry program found" >&2
+echo "Please install a pinentry program:" >&2
+echo "" >&2
+echo "For servers (headless/terminal):" >&2
+echo "  Ubuntu/Debian: sudo apt-get install pinentry-curses" >&2
+echo "  CentOS/RHEL:   sudo yum install pinentry-curses" >&2
+echo "  Alpine:        sudo apk add pinentry-curses" >&2
+echo "  macOS:         sudo port install pinentry-curses" >&2
+echo "" >&2
+echo "For desktop environments:" >&2
+echo "  macOS:         sudo port install pinentry-mac" >&2
+echo "  Linux GUI:     sudo apt-get install pinentry-gtk2" >&2
+echo "" >&2
+echo "Environment info for debugging:" >&2
+echo "  Environment type: $ENV_TYPE" >&2
+echo "  TERM=$TERM" >&2
+echo "  DISPLAY=${DISPLAY:-unset}" >&2
+echo "  SSH_TTY=${SSH_TTY:-unset}" >&2
+echo "  GPG_TTY=${GPG_TTY:-unset}" >&2
+echo "  Current TTY: $(tty 2>/dev/null || echo 'none')" >&2
+echo "  Check ~/.logs/pinentry.log for detailed debugging" >&2
 exit 1
