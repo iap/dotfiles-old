@@ -51,6 +51,7 @@ mkdir -p "$HOME/.logs" 2>/dev/null || true
 # Enhanced terminal detection and TTY validation
 log_debug "Starting with args: $*"
 log_debug "Environment: TERM=$TERM, DISPLAY=${DISPLAY:-unset}, SSH_TTY=${SSH_TTY:-unset}"
+log_debug "Multiplexer: TMUX=${TMUX:-unset}, STY=${STY:-unset}"
 log_debug "TTY info: GPG_TTY=${GPG_TTY:-unset}, tty=$(tty 2>/dev/null || echo 'none')"
 
 # Validate and set up TTY for pinentry
@@ -79,8 +80,12 @@ setup_tty() {
 
 # Enhanced environment detection
 detect_environment() {
+  # Check for terminal multiplexer (tmux/screen) - these can cause pinentry issues
+  if [ -n "$TMUX" ] || [ -n "$STY" ]; then
+    log_debug "Terminal multiplexer detected (TMUX=$TMUX, STY=$STY)"
+    echo "multiplexer"
   # Check for headless/server environment
-  if [ -z "$DISPLAY" ] && [ "$TERM" = "dumb" ]; then
+  elif [ -z "$DISPLAY" ] && [ "$TERM" = "dumb" ]; then
     log_debug "Headless environment detected (no DISPLAY, TERM=dumb)"
     echo "headless"
   elif [ -n "$SSH_TTY" ] || [ -n "$SSH_CONNECTION" ]; then
@@ -103,6 +108,30 @@ log_debug "Environment type: $ENV_TYPE"
 # Enhanced pinentry selection based on environment
 select_pinentry() {
   case "$ENV_TYPE" in
+    "multiplexer")
+      # Terminal multiplexer: force GUI pinentry to avoid terminal conflicts
+      log_debug "Using GUI pinentry for multiplexer environment"
+      # Check MacPorts app bundle first
+      if [ -x "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac" ]; then
+        log_debug "Selected MacPorts GUI pinentry for multiplexer: /Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac"
+        echo "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac"
+        return 0
+      fi
+      # Try other GUI pinentry programs
+      for cmd in pinentry-mac pinentry-gtk-2 pinentry-gtk pinentry-qt; do
+        if command -v "$cmd" > /dev/null 2>&1; then
+          log_debug "Selected GUI pinentry for multiplexer: $cmd"
+          echo "$cmd"
+          return 0
+        fi
+      done
+      # If no GUI available, try pinentry-tty (more stable than curses in multiplexers)
+      if command -v pinentry-tty > /dev/null 2>&1; then
+        log_debug "Selected pinentry-tty as multiplexer fallback"
+        echo "pinentry-tty"
+        return 0
+      fi
+      ;;
     "headless")
       # Headless: only terminal pinentry
       for cmd in pinentry-curses pinentry-tty; do
