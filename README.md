@@ -60,17 +60,20 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ## Installation
 
 1. Clone or initialize the repository:
+
    ```bash
    cd ~/.dotfiles
    git init
    ```
 
 2. Run the bootstrap process:
+
    ```bash
    make bootstrap
    ```
 
 3. Restart your shell or source the configuration:
+
    ```bash
    # For Zsh users
    source ~/.zshrc
@@ -134,6 +137,7 @@ Additional `.local` files for machine/platform-specific customization:
 - `~/.config/env.d/default.local.sh` - Environment variables, API keys, and local settings
 
 #### Machine-Specific Examples:
+
 ```bash
 # ~/.profile.local - macOS with MacPorts
 export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
@@ -174,6 +178,7 @@ Run `make help` to see available targets:
 ## Development Workflow
 
 **Project-specific validation**:
+
 ```bash
 make validate              # System configuration validation
 make check-compliance      # POSIX compliance and security
@@ -183,12 +188,14 @@ make test-safety           # Test safety and reliability features
 ## Switching Between Shells
 
 ### To Zsh:
+
 ```bash
 chsh -s /bin/zsh
 # Restart terminal
 ```
 
 ### To Bash:
+
 ```bash
 chsh -s /bin/bash
 # Restart terminal
@@ -230,6 +237,7 @@ The `bin/` directory contains powerful utility scripts:
 
 ### Git Provider Management (`git-provider`)
 Manage dotfiles across multiple Git providers:
+
 ```bash
 git-provider setup                    # Interactive setup
 git-provider add-remote -p github -u URL
@@ -239,6 +247,7 @@ git-provider sync                     # Sync across providers
 
 ### GPG Management (`gpg-setup`, `gpg-ssh`)
 GPG key management and SSH authentication:
+
 ```bash
 gpg-setup generate                    # Create new GPG key
 gpg-ssh setup                        # Enable GPG agent SSH
@@ -248,6 +257,7 @@ gpg-ssh ssh-keys                     # Show SSH public keys
 
 ### SSH Key Generation (`ssh-keygen-secure`)
 Secure SSH key generation with best practices:
+
 ```bash
 ssh-keygen-secure                     # Generate Ed25519 key
 ssh-keygen-secure -t rsa -b 4096      # Generate RSA key
@@ -255,6 +265,7 @@ ssh-keygen-secure -t rsa -b 4096      # Generate RSA key
 
 ### Email Forwarding
 Simple email forwarding setup:
+
 ```bash
 # Email forwarding is automatically set up during bootstrap
 vim ~/.forward.local                  # Edit with your email addresses
@@ -310,6 +321,7 @@ The configuration automatically detects your platform and provides enhanced comp
 ### Package Management
 
 #### macOS (MacPorts)
+
 ```bash
 # Install essential development tools
 sudo port install git vim gpg2 pinentry-mac
@@ -320,6 +332,7 @@ sudo port install gnupg2 pinentry-curses
 ```
 
 #### Linux (Distribution-specific)
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install git vim gnupg2 pinentry-gtk2
