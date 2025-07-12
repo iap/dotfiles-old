@@ -389,15 +389,60 @@ show_status() {
       echo "  URL: $url"
       echo "  SSH Key: ${key:-default}"
       
-      # Check network before attempting ls-remote
+      # Check network before attempting remote operations
       if [ "${OFFLINE_MODE:-}" = "1" ] || ! check_network; then
         echo "  Status: offline (network unavailable)"
+        echo "  Branches: Unable to check (offline)"
       else
-        # Check if remote exists without authentication
-        if git remote get-url "$provider" >/dev/null 2>&1; then
-          echo "  Status: configured (use 'git ls-remote $provider' to test connectivity)"
+        # Check if remote exists and get branch info
+        if git remote get-url "$provider" > /dev/null 2>&1; then
+          echo "  Status: configured"
+          
+          # Try to get branch information 
+          # Use local branch tracking info instead of remote queries for better performance
+          local_branches=$(git branch -r | grep "$provider/" | wc -l | xargs)
+          
+          if [ "$local_branches" -gt 0 ]; then
+            echo "  Branches: $local_branches tracked branches (from last fetch)"
+            # Show branch names if there aren't too many
+            if [ "$local_branches" -le 5 ]; then
+              git branch -r | grep "$provider/" | while read -r branch; do
+                branch_name=$(echo "$branch" | sed "s|$provider/||" | xargs)
+                echo "    - $branch_name"
+              done
+            else
+              echo "    (use 'git branch -r | grep $provider' to see all branches)"
+            fi
+          else
+            # Fallback: try a quick remote check (without hanging)
+            echo "  Branches: Checking remote..."
+            if git ls-remote --heads "$provider" >/dev/null 2>&1 &
+            then
+              # Process started successfully, give it a moment
+              pid=$!
+              sleep 3
+              if kill -0 "$pid" 2>/dev/null; then
+                # Still running after 3 seconds, kill it
+                kill "$pid" 2>/dev/null
+                wait "$pid" 2>/dev/null
+                echo "  Branches: Unable to check (slow connection - run 'git fetch $provider' to update)"
+              else
+                # Completed quickly
+                wait "$pid"
+                if [ $? -eq 0 ]; then
+                  branch_count=$(git ls-remote --heads "$provider" 2>/dev/null | wc -l | xargs)
+                  echo "  Branches: $branch_count remote branches available"
+                else
+                  echo "  Branches: Unable to check (authentication or connection issue)"
+                fi
+              fi
+            else
+              echo "  Branches: Unable to check (git ls-remote failed)"
+            fi
+          fi
         else
           echo "  Status: remote not found"
+          echo "  Branches: N/A"
         fi
       fi
       echo ""

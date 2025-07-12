@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Pre-commit hook to exclude TODO files and other development-only files
+# This prevents sensitive or temporary development files from being committed
+#
+# To install: cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or use: make install-hooks
+#
+
+# Files to exclude from commits (patterns)
+EXCLUDE_PATTERNS="TODO.md TODO.txt *.todo .notes .scratch"
+
+# Check if any excluded files are staged
+excluded_files=""
+for pattern in $EXCLUDE_PATTERNS; do
+    staged_files=$(git diff --cached --name-only | grep -E "(^|/)${pattern}$" || true)
+    if [ -n "$staged_files" ]; then
+        excluded_files="$excluded_files $staged_files"
+    fi
+done
+
+# If excluded files are found, unstage them
+if [ -n "$excluded_files" ]; then
+    echo "🚫 Pre-commit hook: Excluding development files from commit:"
+    for file in $excluded_files; do
+        echo "   - $file"
+        git reset HEAD "$file" >/dev/null 2>&1
+    done
+    echo ""
+    echo "💡 These files remain in your working directory but won't be committed."
+    echo "   You can continue with your commit - the excluded files are still staged for next time."
+    echo ""
+fi
+
+# Check if there are still files to commit after exclusions
+remaining_files=$(git diff --cached --name-only)
+if [ -z "$remaining_files" ]; then
+    echo "❌ No files to commit after excluding development files."
+    echo "   Stage other files or use 'git commit --allow-empty' if intentional."
+    exit 1
+fi
+
+# Continue with commit
+echo "✅ Pre-commit hook: Proceeding with commit (excluded development files)"
+exit 0
