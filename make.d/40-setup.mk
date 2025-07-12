@@ -11,16 +11,16 @@
 # Path variables for maintainability and consistency
 # These centralized variables eliminate hardcoded paths and make the
 # system easier to maintain and modify
-CONFIG_DIR := $(HOME)/.config          # XDG config directory
-ENV_DIR := $(CONFIG_DIR)/env.d          # Environment configuration
-BACKUP_DIR := $(HOME)/.backup           # Backup storage (secure: 700)
-LOGS_DIR := $(HOME)/.logs               # System logs (secure: 700)
-CACHE_DIR := $(HOME)/.cache             # Temporary cache data
-LOCAL_DIR := $(HOME)/.local             # XDG local directory
-GNUPG_DIR := $(HOME)/.gnupg             # GPG configuration (secure: 700)
-SSH_DIR := $(HOME)/.ssh                 # SSH configuration (secure: 700)
-BIN_DIR := $(HOME)/bin                  # User scripts and utilities
-VIM_CACHE_DIR := $(CACHE_DIR)/vim       # Vim-specific cache directories
+CONFIG_DIR := $(HOME)/.config # XDG config directory
+ENV_DIR := $(CONFIG_DIR)/env.d # Environment configuration
+BACKUP_DIR := $(HOME)/.backup # Backup storage (secure: 700)
+LOGS_DIR := $(HOME)/.logs # System logs (secure: 700)
+CACHE_DIR := $(HOME)/.cache # Temporary cache data
+LOCAL_DIR := $(HOME)/.local # XDG local directory
+GNUPG_DIR := $(HOME)/.gnupg # GPG configuration (secure: 700)
+SSH_DIR := $(HOME)/.ssh # SSH configuration (secure: 700)
+BIN_DIR := $(HOME)/bin # User scripts and utilities
+VIM_CACHE_DIR := $(CACHE_DIR)/vim # Vim-specific cache directories
 
 # Error handling function for critical operations
 define check_result
