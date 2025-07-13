@@ -2,7 +2,7 @@
 
 > **Version**: 2.1.0 | **Last Updated**: 2025-07-12T15:59:00Z | **Status**: ✅ Stable
 
-Cross-platform development environment configuration with modular architecture, comprehensive testing, and optimization features.
+Personal dotfiles for cross-platform development environment management with Makefiles.
 
 ## Overview
 

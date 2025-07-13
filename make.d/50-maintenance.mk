@@ -3,6 +3,9 @@
 
 .PHONY: clean-cache backup auto-cleanup
 
+# Default to dry-run mode for safety
+DRY_RUN ?= 1
+
 # Define common paths
 CACHE_DIR := $(HOME)/.cache
 BACKUP_DIR := $(HOME)/.backup/system

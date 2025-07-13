@@ -1,5 +1,5 @@
 # Dotfiles Makefile - Modular POSIX-compatible development environment management
-# Version: 2.0.0 - Modular architecture with dry-run support
+# Version: 2.0.0 - Modular architecture with DRY_RUN support
 
 # Default target
 .DEFAULT_GOAL := help

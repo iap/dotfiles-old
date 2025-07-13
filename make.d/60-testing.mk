@@ -26,7 +26,7 @@ test-all: test-functionality test-validation test-setup
 # Test functionality features (renamed to avoid conflict with safety module)
 test-functionality:
 	@echo "[INFO] Testing functionality features..."
-	@# Test dry-run functionality
+	@# Test DRY_RUN functionality
 	@if ! make link-dotfiles DRY_RUN=1 >/dev/null 2>&1; then \
 		echo "[ERROR] Dry-run test failed"; \
 		exit 1; \
