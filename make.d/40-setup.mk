@@ -125,7 +125,8 @@ endif
 	@echo "[INFO] Linking SSH configuration..."
 ifdef DRY_RUN
 	@echo "[DRY-RUN] Would create SSH directory: mkdir -p $(SSH_DIR)"
-	@echo "[DRY-RUN] Would set SSH permissions: chmod 700 $(SSH_DIR)"
+	@echo "[DRY-RUN] Would create SSH control directory: mkdir -p $(SSH_DIR)/control"
+	@echo "[DRY-RUN] Would set SSH permissions: chmod 700 $(SSH_DIR) $(SSH_DIR)/control"
 	@echo "[DRY-RUN] Would create SSH symlinks:"
 	@echo "[DRY-RUN]   ln -sf $(PWD)/ssh/config $(SSH_DIR)/config"
 	@echo "[DRY-RUN] Would set SSH file permissions: chmod 600 $(SSH_DIR)/config"
@@ -135,7 +136,8 @@ ifdef DRY_RUN
 else
 	@# Create SSH directory with secure permissions
 	@mkdir -p "$(SSH_DIR)" || { echo "[ERROR] Failed to create $(SSH_DIR)"; exit 1; }
-	@chmod 700 "$(SSH_DIR)" || { echo "[ERROR] Failed to set SSH directory permissions"; exit 1; }
+	@mkdir -p "$(SSH_DIR)/control" || { echo "[ERROR] Failed to create $(SSH_DIR)/control"; exit 1; }
+	@chmod 700 "$(SSH_DIR)" "$(SSH_DIR)/control" || { echo "[ERROR] Failed to set SSH directory permissions"; exit 1; }
 	@# Link SSH configuration and create required files
 	@ln -sf "$(PWD)/ssh/config" "$(SSH_DIR)/config" || { echo "[ERROR] Failed to link SSH config"; exit 1; }
 	@touch "$(SSH_DIR)/known_hosts" "$(SSH_DIR)/known_hosts_local" || { echo "[ERROR] Failed to create SSH known_hosts files"; exit 1; }

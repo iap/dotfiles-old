@@ -31,11 +31,13 @@ ifdef DRY_RUN
 	@echo "[DRY-RUN] Would set permissions for sensitive directories:"
 	@echo "[DRY-RUN]   $(GNUPG_DIR): chmod 700"
 	@echo "[DRY-RUN]   $(SSH_DIR): chmod 700"
+	@echo "[DRY-RUN]   $(SSH_DIR)/control: chmod 700"
 	@echo "[DRY-RUN]   $(BACKUP_DIR): chmod 700"
 	@echo "[DRY-RUN]   $(LOGS_DIR): chmod 700"
 else
 	$(call set_permissions,$(GNUPG_DIR),700)
 	$(call set_permissions,$(SSH_DIR),700)
+	$(call set_permissions,$(SSH_DIR)/control,700)
 	$(call set_permissions,$(BACKUP_DIR),700)
 	$(call set_permissions,$(LOGS_DIR),700)
 endif

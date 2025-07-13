@@ -48,8 +48,11 @@ ifdef DRY_RUN
 	@find "$(LOG_DIR)" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
 	@echo "[DRY-RUN] Would find and remove old backup logs:"
 	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
+	@echo "[DRY-RUN] Would find and remove old SSH control sockets:"
+	@find "$(HOME)/.ssh/control" -type s -mtime +1 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
 else
 	@find "$(LOG_DIR)" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
 	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
+	@find "$(HOME)/.ssh/control" -type s -mtime +1 -exec rm -f {} \; 2>/dev/null || true
 endif
 	@echo "Auto-cleanup complete"

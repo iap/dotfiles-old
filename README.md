@@ -237,6 +237,7 @@ The setup enforces secure permissions:
 - `~/.backup/` - 700 (user only)
 - `~/.gnupg/` - 700 (user only)  
 - `~/.ssh/` - 700 (user only)
+- `~/.ssh/control/` - 700 (user only)
 - Configuration files - 600 (user read/write only)
 
 ## Security Features
