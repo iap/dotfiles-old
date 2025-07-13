@@ -10,61 +10,61 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 
 ## 📂 Project Structure
 
+```text
 .dotfiles/
 ├── Makefile                        # Main Makefile (modular architecture)
 ├── make.d/                         # Modular Makefile components
-│   ├── 05-safety.mk               # Safety and reliability
-│   ├── 10-help.mk                 # Help and information
-│   ├── 20-validation.mk           # Validation scripts
-│   ├── 30-permissions.mk          # Permission management
-│   ├── 40-setup.mk                # Environment setup
-│   ├── 50-maintenance.mk          # Cleanup and maintenance tasks
-│   └── 60-testing.mk              # Testing utilities
+│   ├── 05-safety.mk                # Safety and reliability
+│   ├── 10-help.mk                  # Help and information
+│   ├── 20-validation.mk            # Validation scripts
+│   ├── 30-permissions.mk           # Permission management
+│   ├── 40-setup.mk                 # Environment setup
+│   ├── 50-maintenance.mk           # Cleanup and maintenance tasks
+│   └── 60-testing.mk               # Testing utilities
 ├── README.md                       # Main documentation
 ├── CHANGELOG.md                    # Version history
-├── TODO.md                        # Upcoming tasks
-├── VERSION                        # Current version marker
-├── .editorconfig                  # Editor configuration
-├── .gitignore                     # Git ignore rules
-├── .logs/                         # Logs
-├── bashrc                         # Bash configuration
-├── bin/                           # Utility scripts
-│   ├── git-provider               # Multi-provider Git management
-│   ├── gpg-setup                  # GPG key management tools
-│   ├── gpg-ssh                    # GPG SSH tools
-│   ├── pinentry-fallback          # Cross-platform pinentry
-│   ├── pinentry-fallback-debug    # Pinentry debug mode
-│   └── ssh-keygen-secure          # Secure SSH key generation
-├── config/
-│   └── env.d/
-│       ├── default.local.sh       # Local environment overrides
-│       └── default.sh             # Base environment configuration
-├── docs/
-│   ├── env-setup-guide.md         # Environment setup guide
+├── VERSION                         # Current version marker
+├── .editorconfig                   # Editor configuration
+├── .gitignore                      # Git ignore rules
+├── .logs/                          # Logs
+├── bashrc                          # Bash configuration
+├── bin/                            # Utility scripts
+│   ├── git-provider                # Multi-provider Git management
+│   ├── gpg-setup                   # GPG key management tools
+│   ├── gpg-ssh                     # GPG SSH tools
+│   ├── pinentry-fallback           # Cross-platform pinentry
+│   ├── pinentry-fallback-debug     # Pinentry debug mode
+│   └── ssh-keygen-secure           # Secure SSH key generation
+├── config/                         # Configuration files
+│   └── env.d/                      # Environment configuration
+│       ├── default.local.sh        # Local environment overrides
+│       └── default.sh              # Base environment configuration
+├── docs/                           # Documentation
+│   ├── env-setup-guide.md          # Environment setup guide
 │   ├── pinentry-troubleshooting.md # Pinentry troubleshooting
 │   └── terminal-configuration.md   # Terminal configuration
-├── gitconfig                      # Git global configuration
-├── gitignore_global              # Global gitignore patterns
-├── gnupg/
-│   ├── gpg-agent.conf.template    # GPG agent template
-│   └── gpg.conf                   # GPG configuration
-├── hooks/
-│   └── pre-commit                 # Pre-commit hook
-├── hushlogin                      # Supress login messages
-├── profile                        # Shell profile
-├── shell.d/
-│   ├── aliases.sh                 # Shell aliases
-│   └── env.sh                     # Environment variable loader
-├── ssh/
-│   └── config                     # SSH configuration
-├── template/
-│   ├── config.local              # SSH config template
-│   ├── default.local.sh          # Local env overrides template
-│   ├── forward.local             # Email forward template
-│   ├── gitconfig.local           # Git local config template
-│   └── profile.local             # Local profile template
-├── vimrc                         # Vim configuration
-└── zshrc                         # Zsh configuration
+├── gitconfig                       # Git global configuration
+├── gitignore_global                # Global gitignore patterns
+├── gnupg/                          # GPG configuration
+│   ├── gpg-agent.conf.template     # GPG agent template
+│   └── gpg.conf                    # GPG configuration
+├── hooks/                          # Git hooks
+│   └── pre-commit                  # Pre-commit hook
+├── hushlogin                       # Suppress login messages
+├── profile                         # Shell profile
+├── shell.d/                        # Shell scripts
+│   ├── aliases.sh                  # Shell aliases
+│   └── env.sh                      # Environment variable loader
+├── ssh/                            # SSH configuration
+│   └── config                      # SSH configuration
+├── template/                       # Template files
+│   ├── config.local                # SSH config template
+│   ├── default.local.sh            # Local env overrides template
+│   ├── forward.local               # Email forward template
+│   ├── gitconfig.local             # Git local config template
+│   └── profile.local               # Local profile template
+├── vimrc                           # Vim configuration
+└── zshrc                           # Zsh configuration
 
 12 directories, 43 files
 ```
