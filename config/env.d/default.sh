@@ -84,3 +84,8 @@ if command -v gpgconf > /dev/null 2>&1; then
     log "GPG agent SSH support enabled"
   fi
 fi
+
+# Source local overrides if available
+if [ -f "$HOME/.config/env.d/default.local.sh" ]; then
+    . "$HOME/.config/env.d/default.local.sh"
+fi

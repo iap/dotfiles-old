@@ -4,7 +4,7 @@
 # This module handles the core dotfiles installation and configuration:
 # - Creates required directory structure with proper permissions
 # - Links configuration files and scripts
-# - Processes templates with dynamic path substitution  
+# - Processes templates with dynamic path substitution
 # - Validates shell compatibility and provides recommendations
 # - Implements comprehensive error handling and logging
 
@@ -197,8 +197,10 @@ else
 		echo "~/.forward.local already exists"; \
 	fi
 	@if [ ! -f "$(HOME)/.config/env.d/default.local.sh" ]; then \
-		cp "$(PWD)/template/default.local.sh" "$(HOME)/.config/env.d/default.local.sh"; \
-		echo "Created ~/.config/env.d/default.local.sh from template"; \
+		mkdir -p "$(HOME)/.config/env.d"; \
+		echo "# Local environment variable overrides" > "$(HOME)/.config/env.d/default.local.sh"; \
+		echo "# Add your custom environment variables here" >> "$(HOME)/.config/env.d/default.local.sh"; \
+		echo "Created ~/.config/env.d/default.local.sh"; \
 	else \
 		echo "~/.config/env.d/default.local.sh already exists"; \
 	fi

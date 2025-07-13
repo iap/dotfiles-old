@@ -3,6 +3,22 @@
 
 .PHONY: test test-functionality test-validation test-setup test-all
 
+# Define common paths
+CONFIG_DIR := $(PWD)/config
+GNUPG_TEMPLATE := $(PWD)/gnupg/gpg-agent.conf.template
+
+# Macro for permission checks
+define check-permissions
+if [ -d "$1" ]; then \
+    PERMS=$$(stat -f "%Lp" "$1" 2>/dev/null || stat -c "%a" "$1" 2>/dev/null); \
+    if [ "$$PERMS" != "$2" ]; then \
+        echo "[WARNING] $1 has permissions $$PERMS, expected $2"; \
+    else \
+        echo "[OK] $1 has correct permissions ($2)"; \
+    fi; \
+fi
+endef
+
 # Run all tests
 test-all: test-functionality test-validation test-setup
 	@echo "[INFO] All tests completed successfully"
@@ -51,11 +67,11 @@ test-setup:
 	fi
 	@echo "[OK] Path variables defined"
 	@# Test template validation
-	@if [ ! -f "$(PWD)/gnupg/gpg-agent.conf.template" ]; then \
+	@if [ ! -f "$(GNUPG_TEMPLATE)" ]; then \
 		echo "[ERROR] GPG template not found"; \
 		exit 1; \
 	fi
-	@if ! grep -q "%h" "$(PWD)/gnupg/gpg-agent.conf.template"; then \
+	@if ! grep -q "%h" "$(GNUPG_TEMPLATE)"; then \
 		echo "[ERROR] Template missing placeholder"; \
 		exit 1; \
 	fi
@@ -84,21 +100,14 @@ test-gpg-template:
 	@rm -f /tmp/test-template /tmp/test-output
 	@echo "[OK] GPG template processing working"
 
+# Test permission functions
 test-permissions:
 	@echo "[INFO] Testing permission functions..."
 	@# Test that required directories exist with correct permissions
-	@for dir in "$(BACKUP_DIR)" "$(LOGS_DIR)" "$(GNUPG_DIR)" "$(SSH_DIR)"; do \
-		if [ -d "$$dir" ]; then \
-			PERMS=$$(stat -f "%Lp" "$$dir" 2>/dev/null || stat -c "%a" "$$dir" 2>/dev/null); \
-			if [ "$$dir" = "$(BACKUP_DIR)" ] || [ "$$dir" = "$(LOGS_DIR)" ] || [ "$$dir" = "$(GNUPG_DIR)" ] || [ "$$dir" = "$(SSH_DIR)" ]; then \
-				if [ "$$PERMS" != "700" ]; then \
-					echo "[WARNING] $$dir has permissions $$PERMS, expected 700"; \
-				else \
-					echo "[OK] $$dir has correct permissions (700)"; \
-				fi; \
-			fi; \
-		fi; \
-	done
+	@$(call check-permissions,$(BACKUP_DIR),700)
+	@$(call check-permissions,$(LOGS_DIR),700)
+	@$(call check-permissions,$(GNUPG_DIR),700)
+	@$(call check-permissions,$(SSH_DIR),700)
 	@echo "[INFO] Permission tests completed"
 
 # Comprehensive test runner
@@ -106,8 +115,8 @@ test: test-gpg-template test-permissions test-validation
 	@echo "[INFO] Core tests completed successfully"
 	@echo ""
 	@echo "Test Summary:"
-	@echo "✅ GPG template processing"
-	@echo "✅ Permission validation"  
-	@echo "✅ System validation"
-	@echo "✅ Path variables"
-	@echo "✅ Error handling"
+	@echo "[OK] GPG template processing"
+	@echo "[OK] Permission validation"
+	@echo "[OK] System validation"
+	@echo "[OK] Path variables"
+	@echo "[OK] Error handling"
