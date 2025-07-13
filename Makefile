@@ -11,8 +11,10 @@ include make.d/20-validation.mk
 include make.d/30-permissions.mk
 include make.d/40-setup.mk
 include make.d/50-maintenance.mk
+include make.d/60-testing.mk
 
 # Global PHONY targets from modules
 .PHONY: help validate validate-prerequisites validate-permissions check-compliance
 .PHONY: fix-permissions bootstrap link-dotfiles setup-templates
 .PHONY: clean-cache backup auto-cleanup test-safety help-safety
+.PHONY: test test-all test-validation test-setup test-gpg-template test-permissions

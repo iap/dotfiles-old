@@ -3,6 +3,18 @@
 
 .PHONY: fix-permissions
 
+# Sensitive directories and scripts
+GNUPG_DIR := $(HOME)/.gnupg
+SSH_DIR := $(HOME)/.ssh
+BACKUP_DIR := $(HOME)/.backup
+LOGS_DIR := $(HOME)/.logs
+PINENTRY_SCRIPTS := $(PWD)/bin/pinentry-*
+
+# Macro to set permissions
+define set_permissions
+	@test -d "$(1)" && chmod $(2) "$(1)" || echo "[INFO] Skipping: $(1) (not found)"
+endef
+
 # Fix directory and file permissions for GPG+SSH reliability
 fix-permissions:
 	@echo "Fixing directory and file permissions..."
@@ -16,32 +28,27 @@ else
 endif
 	@echo "Setting secure permissions for sensitive directories..."
 ifdef DRY_RUN
-	@test -d "$(HOME)/.gnupg" && echo "[DRY-RUN] Would set .gnupg permission: chmod 700 $(HOME)/.gnupg" || true
-	@test -d "$(HOME)/.ssh" && echo "[DRY-RUN] Would set .ssh permission: chmod 700 $(HOME)/.ssh" || true
-	@test -d "$(HOME)/.backup" && echo "[DRY-RUN] Would set .backup permission: chmod 700 $(HOME)/.backup" || true
-	@test -d "$(HOME)/.logs" && echo "[DRY-RUN] Would set .logs permission: chmod 700 $(HOME)/.logs" || true
+	@echo "[DRY-RUN] Would set permissions for sensitive directories:"
+	@echo "[DRY-RUN]   $(GNUPG_DIR): chmod 700"
+	@echo "[DRY-RUN]   $(SSH_DIR): chmod 700"
+	@echo "[DRY-RUN]   $(BACKUP_DIR): chmod 700"
+	@echo "[DRY-RUN]   $(LOGS_DIR): chmod 700"
 else
-	@test -d "$(HOME)/.gnupg" && chmod 700 "$(HOME)/.gnupg" || true
-	@test -d "$(HOME)/.ssh" && chmod 700 "$(HOME)/.ssh" || true
-	@test -d "$(HOME)/.backup" && chmod 700 "$(HOME)/.backup" || true
-	@test -d "$(HOME)/.logs" && chmod 700 "$(HOME)/.logs" || true
+	$(call set_permissions,$(GNUPG_DIR),700)
+	$(call set_permissions,$(SSH_DIR),700)
+	$(call set_permissions,$(BACKUP_DIR),700)
+	$(call set_permissions,$(LOGS_DIR),700)
 endif
 	@echo "Setting executable permissions for pinentry scripts..."
 ifdef DRY_RUN
-	@echo "[DRY-RUN] Would set pinentry script permissions: chmod 755 $(PWD)/bin/pinentry-*"
-	@echo "[DRY-RUN] Would set pinentry script permissions: chmod 755 $(HOME)/bin/pinentry-*"
+	@echo "[DRY-RUN] Would set pinentry script permissions: chmod 755 $(PINENTRY_SCRIPTS)"
 else
-	@chmod 755 "$(PWD)/bin/pinentry-"* 2>/dev/null || true
-	@chmod 755 "$(HOME)/bin/pinentry-"* 2>/dev/null || true
+	@chmod 755 $(PINENTRY_SCRIPTS) 2>/dev/null || true
 endif
 	@echo "Creating symlinks with proper permissions..."
 ifdef DRY_RUN
-	@echo "[DRY-RUN] Would remove and recreate pinentry symlink:"
-	@echo "[DRY-RUN]   rm -f $(HOME)/bin/pinentry-fallback"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/pinentry-fallback $(HOME)/bin/pinentry-fallback"
+	@echo "[DRY-RUN] Would create symlink: $(HOME)/bin/pinentry-fallback"
 else
-	@# Remove and recreate pinentry symlink with 711 permissions (matching bin directory)
-	@rm -f "$(HOME)/bin/pinentry-fallback"
-	@umask 066 && ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback" && umask 077
+	@ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"
 endif
 	@echo "Permission fixes complete"

@@ -1,5 +1,10 @@
 # System junk
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Logs and caches
@@ -7,19 +12,19 @@ Thumbs.db
 .cache/
 logs/
 
-# Backup
+# Backup files
 .backup/
 *.bak
 *.swp
 
-# Secrets
+# Secrets and sensitive files
 *.env
 *.local
 *.key
 *.pem
 .gnupg/
 
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *.so
@@ -28,24 +33,24 @@ __pycache__/
 dist/
 build/
 
-# Node
+# Node.js artifacts
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Rust
+# Rust artifacts
 target/
 Cargo.lock
 
-# Go
+# Go artifacts
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
 
-# Java
+# Java artifacts
 *.class
 *.jar
 *.war
@@ -56,16 +61,7 @@ Cargo.lock
 *.temp
 *~
 
-# Editor files
+# Editor-specific files
 .vscode/
 .idea/
 *.sublime-*
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db

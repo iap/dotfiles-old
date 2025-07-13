@@ -7,6 +7,12 @@ SHELL := /bin/sh
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-builtin-variables
 
+# Centralized configuration
+TIMEOUT := $(or $(TIMEOUT), 300)
+RETRY_COUNT := $(or $(RETRY_COUNT), 3)
+RETRY_DELAY := $(or $(RETRY_DELAY), 2)
+TIMEOUT_CMD := $(shell command -v timeout || command -v gtimeout || echo "")
+
 # Timeout for long-running operations (seconds)
 TIMEOUT := 300
 RETRY_COUNT := 3
@@ -18,10 +24,8 @@ set -e; \
 trap 'echo "ERROR: Operation interrupted at line $$LINENO" >&2; exit 1' INT TERM; \
 trap 'echo "ERROR: Operation failed at line $$LINENO" >&2; exit 1' ERR; \
 timeout_cmd() { \
-    if command -v timeout >/dev/null 2>&1; then \
-        timeout $(TIMEOUT) "$$@"; \
-    elif command -v gtimeout >/dev/null 2>&1; then \
-        gtimeout $(TIMEOUT) "$$@"; \
+    if [ -n "$(TIMEOUT_CMD)" ]; then \
+        $(TIMEOUT_CMD) $(TIMEOUT) "$$@"; \
     else \
         "$$@"; \
     fi; \
@@ -54,7 +58,7 @@ progress_start() { \
     printf "Progress: "; \
 }; \
 progress_update() { \
-    printf "."; \
+    printf "[%s] ." "$$(date +%H:%M:%S)"; \
 }; \
 progress_end() { \
     printf " done\n"; \
@@ -140,6 +144,10 @@ safe_copy() { \
     if [ ! -f "$$src" ]; then \
         echo "ERROR: Source file does not exist: $$src" >&2; \
         return 1; \
+    fi; \
+    if [ -f "$$dst" ]; then \
+        echo "Backing up existing file: $$dst.backup"; \
+        mv "$$dst" "$$dst.backup"; \
     fi; \
     cp "$$src" "$$dst" || { echo "ERROR: Failed to copy file: $$src -> $$dst" >&2; return 1; }; \
 }

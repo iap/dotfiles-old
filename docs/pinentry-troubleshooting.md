@@ -9,6 +9,7 @@ This guide helps resolve common issues with GPG pinentry authentication, particu
 **Symptoms**: GPG operations fail with "agent not available" errors.
 
 **Solutions**:
+
 ```bash
 # Restart GPG agent
 gpg-connect-agent reloadagent /bye
@@ -23,10 +24,13 @@ gpg-agent --daemon
 
 **Solutions**:
 - **macOS**: Install pinentry via MacPorts:
+
   ```bash
   sudo port install pinentry-mac
   ```
+
 - **Linux**: Install pinentry package:
+
   ```bash
   # Ubuntu/Debian
   sudo apt install pinentry-gtk2
@@ -39,6 +43,7 @@ gpg-agent --daemon
 **Symptoms**: Pinentry appears in wrong terminal window or fails to display.
 
 **Solutions**:
+
 ```bash
 # Set GPG_TTY in your shell profile
 export GPG_TTY=$(tty)
@@ -51,6 +56,7 @@ gpg-connect-agent updatestartuptty /bye
 **Symptoms**: SSH authentication fails when using GPG keys.
 
 **Solutions**:
+
 ```bash
 # Add to ~/.gnupg/gpg-agent.conf
 enable-ssh-support
@@ -67,14 +73,17 @@ gpgconf --kill gpg-agent
 
 ### Linux
 - **X11 Forwarding**: For remote sessions, ensure X11 forwarding is enabled:
+
   ```bash
   ssh -X user@host
   ```
+
 - **Wayland**: Use pinentry-gtk2 or pinentry-qt for Wayland compatibility.
 
 ## Debugging Steps
 
 ### 1. Check GPG Agent Status
+
 ```bash
 # Check if agent is running
 gpg-connect-agent /bye
@@ -84,6 +93,7 @@ gpg-connect-agent 'getinfo version' /bye
 ```
 
 ### 2. Test Pinentry Manually
+
 ```bash
 # Test pinentry directly
 echo "GETPIN" | pinentry-mac
@@ -93,6 +103,7 @@ echo "GETPIN" | pinentry-gtk2
 ```
 
 ### 3. Check Configuration
+
 ```bash
 # View current gpg-agent configuration
 gpgconf --list-options gpg-agent
@@ -113,6 +124,7 @@ The dotfiles system includes a `pinentry-fallback` script that automatically sel
 
 ### Customization
 Edit `~/.gnupg/gpg-agent.conf` to specify the fallback script:
+
 ```
 pinentry-program $HOME/bin/pinentry-fallback
 ```

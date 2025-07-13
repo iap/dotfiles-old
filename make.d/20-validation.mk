@@ -9,7 +9,7 @@ validate-prerequisites:
 	@echo "Checking basic system requirements..."
 	@test -d "$(HOME)" || (echo "ERROR: HOME directory not found"; exit 1)
 	@test -x "$$(which vim)" || (echo "ERROR: vim not found - install required"; exit 1)
-	@test -x "$$(which git)" || (echo "ERROR: git not found - install required"; exit 1) 
+	@test -x "$$(which git)" || (echo "ERROR: git not found - install required"; exit 1)
 	@echo "Checking write permissions..."
 	@test -w "$(HOME)" || (echo "ERROR: Cannot write to HOME directory"; exit 1)
 	@echo "Checking dotfiles directory..."
@@ -142,9 +142,14 @@ validate-permissions:
 check-compliance: validate
 	@echo "Performing full system compliance check..."
 	@echo "Checking shell syntax..."
-	@zsh -n zshrc && echo "[OK] zshrc syntax OK" || (echo "[ERROR] zshrc syntax error"; exit 1)
-	@bash -n bashrc && echo "[OK] bashrc syntax OK" || (echo "[ERROR] bashrc syntax error"; exit 1)
-	@sh -n profile && echo "[OK] profile syntax OK" || (echo "[ERROR] profile syntax error"; exit 1)
+	@for shell_file in zshrc bashrc profile; do \
+		case $$shell_file in \
+			zshrc) shell=zsh ;; \
+			bashrc) shell=bash ;; \
+			profile) shell=sh ;; \
+		esac; \
+		$$shell -n $$shell_file && echo "[OK] $$shell_file syntax OK" || (echo "[ERROR] $$shell_file syntax error"; exit 1); \
+	done
 	@echo "Checking script standards..."
 	@for script in bin/*; do \
 		if [ -f "$$script" ]; then \
@@ -153,6 +158,11 @@ check-compliance: validate
 		fi; \
 	done
 	@echo "Checking template system..."
-	@test -d template && echo "[OK] Template directory exists" || (echo "[ERROR] template/ directory required"; exit 1)
-	@test -f template/gitconfig.local && echo "[OK] Git template exists" || (echo "[ERROR] gitconfig.local template required"; exit 1)
+	@for template_file in template template/gitconfig.local; do \
+		if [ -d "$$template_file" ] || [ -f "$$template_file" ]; then \
+			echo "[OK] $$template_file exists"; \
+		else \
+			echo "[ERROR] $$template_file required"; exit 1; \
+		fi; \
+	done
 	@echo "[OK] Full compliance check complete"

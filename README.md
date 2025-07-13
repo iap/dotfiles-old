@@ -1,76 +1,91 @@
 # Dotfiles
 
-> **Version**: 2.0.3 | **Last Updated**: 2025-07-12T14:40:00Z | **Status**: ✅ Stable
+> **Version**: 2.1.0 | **Last Updated**: 2025-07-12T15:59:00Z | **Status**: ✅ Stable
 
-Minimal, secure, and cross-platform development environment configuration with modular architecture and comprehensive safety features.
+Cross-platform development environment configuration with modular architecture, comprehensive testing, and optimization features.
 
 ## Overview
 
 This dotfiles setup follows POSIX-compatible standards and supports both Zsh and Bash shells with shared environment configuration. Includes MacPorts package manager integration on macOS for streamlined development tool installation.
 
-## Structure
+## 📂 Project Structure
 
-```
 .dotfiles/
-├── Makefile                # Main Makefile (modular architecture)
-├── make.d/                 # Modular Makefile components
-│   ├── 05-safety.mk       # Shell safety and reliability
-│   ├── 10-help.mk         # Help and information
-│   ├── 20-validation.mk   # System validation
-│   ├── 30-permissions.mk  # Permission management
-│   ├── 40-setup.mk        # Bootstrap and setup
-│   └── 50-maintenance.mk  # Cleanup and backup
-├── README.md              # Documentation
-├── CHANGELOG.md           # Version history
-├── VERSION                # Current version
-├── bashrc                 # Bash shell configuration
-├── bin/                   # Essential utility scripts
-│   ├── git-provider       # Multi-provider Git management
-│   ├── gpg-setup          # GPG key management
-│   ├── gpg-ssh            # GPG SSH authentication
-│   ├── pinentry-fallback  # Cross-platform pinentry (enhanced)
-│   └── ssh-keygen-secure  # Secure SSH key generation
+├── Makefile                        # Main Makefile (modular architecture)
+├── make.d/                         # Modular Makefile components
+│   ├── 05-safety.mk               # Safety and reliability
+│   ├── 10-help.mk                 # Help and information
+│   ├── 20-validation.mk           # Validation scripts
+│   ├── 30-permissions.mk          # Permission management
+│   ├── 40-setup.mk                # Environment setup
+│   ├── 50-maintenance.mk          # Cleanup and maintenance tasks
+│   └── 60-testing.mk              # Testing utilities
+├── README.md                       # Main documentation
+├── CHANGELOG.md                    # Version history
+├── TODO.md                        # Upcoming tasks
+├── VERSION                        # Current version marker
+├── .editorconfig                  # Editor configuration
+├── .gitignore                     # Git ignore rules
+├── .logs/                         # Logs
+├── bashrc                         # Bash configuration
+├── bin/                           # Utility scripts
+│   ├── git-provider               # Multi-provider Git management
+│   ├── gpg-setup                  # GPG key management tools
+│   ├── gpg-ssh                    # GPG SSH tools
+│   ├── pinentry-fallback          # Cross-platform pinentry
+│   ├── pinentry-fallback-debug    # Pinentry debug mode
+│   └── ssh-keygen-secure          # Secure SSH key generation
 ├── config/
 │   └── env.d/
-│       └── default.sh     # Central environment configuration
-├── gitconfig              # Git configuration
-├── gitignore_global       # Global Git ignore rules
-├── gnupg/                 # GPG configuration
-│   ├── gpg-agent.conf.template # GPG agent template (dynamic paths)
-│   └── gpg.conf           # GPG client configuration
-├── hushlogin              # Suppress login messages
-├── profile                # POSIX shell profile
-├── shell.d/               # Shared shell configuration
-│   ├── aliases.sh         # Common aliases for bash/zsh
-│   └── env.sh             # Shared environment loader
+│       ├── default.local.sh       # Local environment overrides
+│       └── default.sh             # Base environment configuration
+├── docs/
+│   ├── env-setup-guide.md         # Environment setup guide
+│   ├── pinentry-troubleshooting.md # Pinentry troubleshooting
+│   └── terminal-configuration.md   # Terminal configuration
+├── gitconfig                      # Git global configuration
+├── gitignore_global              # Global gitignore patterns
+├── gnupg/
+│   ├── gpg-agent.conf.template    # GPG agent template
+│   └── gpg.conf                   # GPG configuration
+├── hooks/
+│   └── pre-commit                 # Pre-commit hook
+├── hushlogin                      # Supress login messages
+├── profile                        # Shell profile
+├── shell.d/
+│   ├── aliases.sh                 # Shell aliases
+│   └── env.sh                     # Environment variable loader
 ├── ssh/
-│   └── config             # SSH client configuration
-├── template/              # Local configuration templates
-│   ├── config.local       # SSH host configuration template
-│   ├── default.local.sh   # Environment variable overrides template
-│   ├── forward.local      # Email forwarding template
-│   ├── gitconfig.local    # Git user settings template
-│   └── profile.local      # POSIX shell profile overrides template
-├── vimrc                  # Vim editor configuration
-└── zshrc                  # Zsh shell configuration
+│   └── config                     # SSH configuration
+├── template/
+│   ├── config.local              # SSH config template
+│   ├── default.local.sh          # Local env overrides template
+│   ├── forward.local             # Email forward template
+│   ├── gitconfig.local           # Git local config template
+│   └── profile.local             # Local profile template
+├── vimrc                         # Vim configuration
+└── zshrc                         # Zsh configuration
 
-9 directories, 27 files
+12 directories, 43 files
 ```
 
 ## Installation
 
 1. Clone or initialize the repository:
+
    ```bash
    cd ~/.dotfiles
    git init
    ```
 
 2. Run the bootstrap process:
+
    ```bash
    make bootstrap
    ```
 
 3. Restart your shell or source the configuration:
+
    ```bash
    # For Zsh users
    source ~/.zshrc
@@ -82,17 +97,20 @@ This dotfiles setup follows POSIX-compatible standards and supports both Zsh and
 ## Shell Support
 
 ### Zsh (Primary)
+
 - Default shell configuration
 - Advanced completion and history
 - Modular configuration via `shell.d/`
 
 ### Bash (Optional Alternative)
+
 - Legacy compatibility
 - Same aliases and environment as Zsh
 - Bash completion support
 - Modular configuration via `shell.d/`
 
 Both shells share the same:
+
 - Environment variables
 - PATH configuration
 - Git aliases
@@ -122,6 +140,7 @@ The `bootstrap` process automatically creates local configuration files from tem
 - `~/.profile.local` - POSIX shell profile overrides
 
 These files are:
+
 - Created from `template/` directory during bootstrap
 - Automatically sourced by main configuration files
 - Excluded from Git tracking (never committed)
@@ -130,10 +149,12 @@ These files are:
 ### Manual Overrides
 
 Additional `.local` files for machine/platform-specific customization:
+
 - `~/.profile.local` - Shell environment, PATH, and development tool overrides
 - `~/.config/env.d/default.local.sh` - Environment variables, API keys, and local settings
 
-#### Machine-Specific Examples:
+#### Machine-Specific Examples
+
 ```bash
 # ~/.profile.local - macOS with MacPorts
 export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
@@ -145,23 +166,37 @@ export KUBECONFIG="$HOME/.kube/config"
 export NODE_ENV="development"
 ```
 
+## Local Environment Configuration
+
+Refer to [docs/local-env-config.md](docs/local-env-config.md) for detailed environment configuration instructions.
+
+
+Place this file at `~/.config/env.d/default.local.sh` and it will be automatically sourced by the environment setup.
+
 ## Available Commands
 
 Run `make help` to see available targets:
 
 ### Core Operations
+
 - `make bootstrap` - Complete setup with safety features
 - `make validate` - System configuration validation
 - `make link-dotfiles` - Create symbolic links
 - `make clean-cache` - Clear cache directory
 - `make backup` - Backup configuration
 
-### Safety & Testing
+### Testing & Optimization
+
+- `make test` - Run comprehensive system tests
+- `make test-validation` - Test system validation functions
+- `make test-permissions` - Test directory permission validation
+- `make test-gpg-template` - Test GPG template processing
 - `make test-safety` - Test safety and reliability features
 - `make help-safety` - Show safety feature documentation
 - All targets support `DRY_RUN=1` for safe preview
 
 ### Safety Modes
+
 - `DRY_RUN=1` - Preview actions without executing
 - `OFFLINE_MODE=1` - Skip network operations
 - `TIMEOUT=seconds` - Override operation timeout
@@ -170,6 +205,7 @@ Run `make help` to see available targets:
 ## Development Workflow
 
 **Project-specific validation**:
+
 ```bash
 make validate              # System configuration validation
 make check-compliance      # POSIX compliance and security
@@ -178,13 +214,15 @@ make test-safety           # Test safety and reliability features
 
 ## Switching Between Shells
 
-### To Zsh:
+### To Zsh
+
 ```bash
 chsh -s /bin/zsh
 # Restart terminal
 ```
 
-### To Bash:
+### To Bash
+
 ```bash
 chsh -s /bin/bash
 # Restart terminal
@@ -195,6 +233,7 @@ Both configurations will work seamlessly as they share the same environment foun
 ## Directory Permissions
 
 The setup enforces secure permissions:
+
 - `~/.backup/` - 700 (user only)
 - `~/.gnupg/` - 700 (user only)  
 - `~/.ssh/` - 700 (user only)
@@ -214,6 +253,7 @@ The setup enforces secure permissions:
 ## Clean Terminal Experience
 
 The `.hushlogin` file suppresses system login messages for a professional, minimal terminal:
+
 - No "Last login" information
 - No system messages (MOTD)
 - No mail notifications
@@ -225,7 +265,9 @@ The `.hushlogin` file suppresses system login messages for a professional, minim
 The `bin/` directory contains powerful utility scripts:
 
 ### Git Provider Management (`git-provider`)
+
 Manage dotfiles across multiple Git providers:
+
 ```bash
 git-provider setup                    # Interactive setup
 git-provider add-remote -p github -u URL
@@ -234,7 +276,9 @@ git-provider sync                     # Sync across providers
 ```
 
 ### GPG Management (`gpg-setup`, `gpg-ssh`)
+
 GPG key management and SSH authentication:
+
 ```bash
 gpg-setup generate                    # Create new GPG key
 gpg-ssh setup                        # Enable GPG agent SSH
@@ -243,14 +287,18 @@ gpg-ssh ssh-keys                     # Show SSH public keys
 ```
 
 ### SSH Key Generation (`ssh-keygen-secure`)
+
 Secure SSH key generation with best practices:
+
 ```bash
 ssh-keygen-secure                     # Generate Ed25519 key
 ssh-keygen-secure -t rsa -b 4096      # Generate RSA key
 ```
 
 ### Email Forwarding
+
 Simple email forwarding setup:
+
 ```bash
 # Email forwarding is automatically set up during bootstrap
 vim ~/.forward.local                  # Edit with your email addresses
@@ -259,20 +307,25 @@ vim ~/.forward.local                  # Edit with your email addresses
 ## Advanced Features
 
 ### GPG SSH Authentication
+
 Use GPG keys for SSH authentication (enabled by default):
+
 - Unified key management (GPG + SSH)
 - Secure agent-based authentication
 - Cross-platform compatibility
 - Professional security setup
 
 ### Multi-Provider Git Support
+
 Synchronize dotfiles across multiple Git providers:
+
 - GitHub, GitLab, Bitbucket, Codeberg, Gitea
 - Primary/secondary provider management
 - Automated push/pull synchronization
 - Per-provider SSH key support
 
 ### SSH Security Configuration
+
 - Essential defaults for maximum cross-platform compatibility
 - Platform-specific overrides in `~/.ssh/config.local`
 - Modern cryptography with fallbacks for older systems
@@ -281,13 +334,16 @@ Synchronize dotfiles across multiple Git providers:
 - Port 22 by default (customizable per host in config.local)
 
 ### Dynamic Configuration System
+
 The dotfiles system uses template-based configuration for cross-platform compatibility:
+
 - **GPG Agent Template**: `gnupg/gpg-agent.conf.template` with `%h` placeholder for dynamic home path
 - **Bootstrap Processing**: Templates processed during setup with actual paths
 - **Path Independence**: No hardcoded paths in configuration files
 - **Cross-Platform**: Works across different user directories and systems
 
 ### Email Integration
+
 - Template-based forwarding configuration
 - Private address management (`.forward.local`)
 - Validation and backup functionality
@@ -295,6 +351,7 @@ The dotfiles system uses template-based configuration for cross-platform compati
 ## Platform Detection & Compatibility
 
 The configuration automatically detects your platform and provides enhanced compatibility:
+
 - `$OS_TYPE` is set to "macOS" or "linux"
 - Platform-specific PATH and tool configurations
 - **MacPorts support on macOS**: `/opt/local/bin:/opt/local/sbin` added to PATH
@@ -306,6 +363,7 @@ The configuration automatically detects your platform and provides enhanced comp
 ### Package Management
 
 #### macOS (MacPorts)
+
 ```bash
 # Install essential development tools
 sudo port install git vim gpg2 pinentry-mac
@@ -316,6 +374,7 @@ sudo port install gnupg2 pinentry-curses
 ```
 
 #### Linux (Distribution-specific)
+
 ```bash
 # Ubuntu/Debian
 sudo apt-get install git vim gnupg2 pinentry-gtk2
