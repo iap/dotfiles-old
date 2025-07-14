@@ -114,14 +114,17 @@ validate-permissions:
 		fi; \
 	done
 	@echo "Checking pinentry script permissions..."
-	@if [ -f "$(PWD)/bin/pinentry-fallback" ]; then \
-		if [ -x "$(PWD)/bin/pinentry-fallback" ]; then \
-			echo "[OK] pinentry-fallback is executable in .dotfiles/bin/"; \
+	@if [ -f "$(HOME)/bin/pinentry-fallback" ]; then \
+		if [ -x "$(HOME)/bin/pinentry-fallback" ]; then \
+			echo "[OK] pinentry-fallback is executable in ~/bin/"; \
 		else \
-			echo "[ERROR] pinentry-fallback is not executable in .dotfiles/bin/"; \
+			echo "[ERROR] pinentry-fallback is not executable in ~/bin/"; \
 		fi; \
+	elif [ -f "$(PWD)/bin/pinentry-fallback" ]; then \
+		echo "[INFO] pinentry-fallback found in .dotfiles/bin/ but not copied to ~/bin/"; \
+		echo "[INFO] Run 'make bootstrap' to copy essential scripts"; \
 	else \
-		echo "[WARNING] pinentry-fallback not found in .dotfiles/bin/"; \
+		echo "[WARNING] pinentry-fallback not found in .dotfiles/bin/ or ~/bin/"; \
 	fi
 	@echo "Permission validation complete"
 

@@ -1,50 +1,24 @@
 # Permission management and security
-# Part of modular Makefile system
+# Part of modular Makefile system - optimized with common utilities
 
 .PHONY: fix-permissions
 
-# Sensitive directories and scripts
-GNUPG_DIR := $(HOME)/.gnupg
-SSH_DIR := $(HOME)/.ssh
-BACKUP_DIR := $(HOME)/.backup
-LOGS_DIR := $(HOME)/.logs
-PINENTRY_SCRIPTS := $(PWD)/bin/pinentry-*
-
-# Macro to set permissions
-define set_permissions
-	@test -d "$(1)" && chmod $(2) "$(1)" || echo "[INFO] Skipping: $(1) (not found)"
-endef
+# Note: Common paths and permission macros are now in 00-common.mk
+# GNUPG_DIR, SSH_DIR, BACKUP_DIR, LOGS_DIR defined there
+PINENTRY_SCRIPTS := $(PROJECT_BIN_DIR)/pinentry-*
 
 # Fix directory and file permissions for GPG+SSH reliability
 fix-permissions:
-	@echo "Fixing directory and file permissions..."
-	@echo "Setting directory permissions for security consistency..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would set HOME permission: chmod 711 $(HOME)"
-	@echo "[DRY-RUN] Would set bin permission: chmod 711 $(HOME)/bin"
-else
-	@chmod 711 "$(HOME)"  # Home directory baseline
-	@chmod 711 "$(HOME)/bin"  # Match home directory permissions
-endif
-	@echo "Setting secure permissions for sensitive directories..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would set permissions for sensitive directories:"
-	@echo "[DRY-RUN]   $(GNUPG_DIR): chmod 700"
-	@echo "[DRY-RUN]   $(SSH_DIR): chmod 700"
-	@echo "[DRY-RUN]   $(SSH_DIR)/control: chmod 700"
-	@echo "[DRY-RUN]   $(BACKUP_DIR): chmod 700"
-	@echo "[DRY-RUN]   $(LOGS_DIR): chmod 700"
-else
-	$(call set_permissions,$(GNUPG_DIR),700)
-	$(call set_permissions,$(SSH_DIR),700)
-	$(call set_permissions,$(SSH_DIR)/control,700)
-	$(call set_permissions,$(BACKUP_DIR),700)
-	$(call set_permissions,$(LOGS_DIR),700)
-endif
-	@echo "Setting executable permissions for pinentry scripts..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would set pinentry script permissions: chmod 755 $(PINENTRY_SCRIPTS)"
-else
-	@chmod 755 $(PINENTRY_SCRIPTS) 2>/dev/null || true
-endif
-	@echo "Permission fixes complete"
+	$(call show_progress,Fixing directory and file permissions...)
+	$(call log_action,Starting permission fixes)
+	$(call set_permissions_safe,$(HOME),711)
+	$(call set_permissions_safe,$(BIN_DIR),711)
+	$(call show_progress,Setting secure permissions for sensitive directories...)
+	$(call set_permissions_safe,$(GNUPG_DIR),700)
+	$(call set_permissions_safe,$(SSH_DIR),700)
+	$(call set_permissions_safe,$(SSH_DIR)/control,700)
+	$(call set_permissions_safe,$(BACKUP_DIR),700)
+	$(call set_permissions_safe,$(LOGS_DIR),700)
+	$(call show_progress,Setting executable permissions for pinentry scripts...)
+	$(call dry_run_or_execute,chmod 755 $(PINENTRY_SCRIPTS) 2>/dev/null || true)
+	$(call show_progress,Permission fixes complete)

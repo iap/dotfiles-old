@@ -147,9 +147,22 @@ else
 	@chmod 600 "$(SSH_DIR)/config" "$(SSH_DIR)/known_hosts" "$(SSH_DIR)/known_hosts_local" || { echo "[ERROR] Failed to set SSH file permissions"; exit 1; }
 	@echo "[INFO] SSH configuration linked successfully"
 endif
-	@echo "[INFO] Scripts remain in .dotfiles/bin/ for security (not linked to ~/bin)"
-	@echo "[INFO] To use scripts system-wide, manually copy desired scripts to ~/bin/"
-	@echo "Dotfiles linked successfully"
+	$(call show_progress,Installing essential scripts to ~/bin/...)
+ifdef DRY_RUN
+	@echo "[DRY-RUN] Would copy: $(PROJECT_BIN_DIR)/pinentry-fallback -> $(BIN_DIR)/pinentry-fallback"
+	@echo "[DRY-RUN] Would set permissions: chmod 755 $(BIN_DIR)/pinentry-fallback"
+else
+	@# Copy pinentry-fallback to ~/bin for GPG functionality
+	@if [ -f "$(PROJECT_BIN_DIR)/pinentry-fallback" ]; then \
+		cp "$(PROJECT_BIN_DIR)/pinentry-fallback" "$(BIN_DIR)/pinentry-fallback" && \
+		chmod 755 "$(BIN_DIR)/pinentry-fallback" && \
+		echo "[INFO] Copied pinentry-fallback to ~/bin/"; \
+	else \
+		echo "[WARNING] pinentry-fallback script not found in .dotfiles/bin/"; \
+	fi
+endif
+	$(call show_progress,Scripts remain in .dotfiles/bin/ for security (pinentry-fallback copied to ~/bin))
+	$(call show_progress,Dotfiles linked successfully)
 
 # Setup local configuration templates
 # Local files can override defaults from dotfiles
