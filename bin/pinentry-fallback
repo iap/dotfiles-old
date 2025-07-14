@@ -1,109 +1,80 @@
 #!/bin/sh
-# Enhanced cross-platform pinentry fallback script
+# Cross-platform pinentry fallback script
 # Ensures pinentry appears in the active terminal window
-# Version: 2.1 - Enhanced TTY binding and terminal detection
+# Version: 2.2 - Restructured with modular functions
+# Timestamp: 2025-01-13T20:07Z
 
+set -eu
+
+# Configuration
+SCRIPT_NAME="$(basename "$0")"
+LOG_FILE="$HOME/.logs/pinentry.log"
+
+# Display usage information
 usage() {
-  cat <<EOF
-Usage: $(basename "$0") [pinentry-options]
+    cat << EOF
+Usage: $SCRIPT_NAME [pinentry-options]
 
-Enhanced cross-platform pinentry fallback script for GPG.
-Automatically selects the best available pinentry program and
-ensures it appears in the active terminal window.
-
-Priority order:
-  1. Terminal-based: pinentry-curses, pinentry-tty
-  2. GUI fallbacks: pinentry-gtk-2, pinentry-gtk, pinentry-qt
-  3. macOS specific: pinentry-mac
-  4. MacPorts paths: /opt/local/bin/pinentry-*
+Cross-platform pinentry fallback script for GPG.
+Automatically selects the best available pinentry program.
 
 Options:
-  All options are passed through to the selected pinentry program
   -h, --help    Show this help message
 
 Examples:
-  $(basename "$0")           # Interactive pinentry
-  $(basename "$0") --version  # Show pinentry version
+  $SCRIPT_NAME              # Interactive pinentry
+  $SCRIPT_NAME --version     # Show pinentry version
 
-Note: This script is typically called by GPG agent, not directly.
-      Enhanced with TTY binding to prevent spawning in wrong terminal.
+Note: Typically called by GPG agent, not directly.
 EOF
+    exit 0
 }
 
-# Handle help options
-for arg in "$@"; do
-  case "$arg" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-  esac
-done
-
-# Enhanced logging function
-log_debug() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] pinentry-fallback: $*" >> "$HOME/.logs/pinentry.log" 2>/dev/null || true
-}
-
-# Create logs directory if needed
-mkdir -p "$HOME/.logs" 2>/dev/null || true
-
-# Enhanced terminal detection and TTY validation
-log_debug "Starting with args: $*"
-log_debug "Environment: TERM=$TERM, DISPLAY=${DISPLAY:-unset}, SSH_TTY=${SSH_TTY:-unset}"
-log_debug "Multiplexer: TMUX=${TMUX:-unset}, STY=${STY:-unset}"
-log_debug "TTY info: GPG_TTY=${GPG_TTY:-unset}, tty=$(tty 2>/dev/null || echo 'none')"
-
-# Validate and set up TTY for pinentry
-setup_tty() {
-  # Ensure GPG_TTY is set to current TTY
-  if [ -z "$GPG_TTY" ]; then
-    if TTY_DEVICE=$(tty 2>/dev/null); then
-      export GPG_TTY="$TTY_DEVICE"
-      log_debug "Set GPG_TTY to current tty: $GPG_TTY"
-    else
-      log_debug "Warning: Could not determine current TTY"
+# Setup logging with directory detection
+setup_logging() {
+    local logs_dir="$HOME/.logs"
+    if [ ! -d "$logs_dir" ]; then
+        mkdir -p "$logs_dir" 2>/dev/null || {
+            # Fallback to /tmp if home logs dir fails
+            LOG_FILE="/tmp/pinentry-$USER.log"
+            return 0
+        }
     fi
-  else
-    log_debug "Using existing GPG_TTY: $GPG_TTY"
-  fi
-  
-  # Validate TTY is accessible
-  if [ -n "$GPG_TTY" ] && [ -c "$GPG_TTY" ]; then
-    log_debug "TTY validation passed: $GPG_TTY is accessible"
-    return 0
-  else
-    log_debug "TTY validation failed: $GPG_TTY not accessible or not set"
-    return 1
-  fi
 }
 
-# Enhanced environment detection
+# Logging function
+log_debug() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $SCRIPT_NAME: $*" >> "$LOG_FILE" 2>/dev/null || true
+}
+
+# Setup TTY for pinentry
+setup_tty() {
+    if [ -z "${GPG_TTY:-}" ]; then
+        if TTY_DEVICE=$(tty 2>/dev/null); then
+            export GPG_TTY="$TTY_DEVICE"
+            log_debug "Set GPG_TTY to current tty: $GPG_TTY"
+        else
+            log_debug "Warning: Could not determine current TTY"
+        fi
+    else
+        log_debug "Using existing GPG_TTY: $GPG_TTY"
+    fi
+}
+
+# Detect environment type
 detect_environment() {
-  # Check for terminal multiplexer (tmux/screen) - these can cause pinentry issues
-  if [ -n "$TMUX" ] || [ -n "$STY" ]; then
-    log_debug "Terminal multiplexer detected (TMUX=$TMUX, STY=$STY)"
-    echo "multiplexer"
-  # Check for headless/server environment
-  elif [ -z "$DISPLAY" ] && [ "$TERM" = "dumb" ]; then
-    log_debug "Headless environment detected (no DISPLAY, TERM=dumb)"
-    echo "headless"
-  elif [ -n "$SSH_TTY" ] || [ -n "$SSH_CONNECTION" ]; then
-    log_debug "SSH session detected"
-    echo "ssh"
-  elif [ -n "$DISPLAY" ]; then
-    log_debug "GUI environment detected (DISPLAY set)"
-    echo "gui"
-  else
-    log_debug "Terminal environment detected"
-    echo "terminal"
-  fi
+    if [ -n "${TMUX:-}" ] || [ -n "${STY:-}" ]; then
+        echo "multiplexer"
+    elif [ -z "${DISPLAY:-}" ] && [ "${TERM:-}" = "dumb" ]; then
+        echo "headless"
+    elif [ -n "${SSH_TTY:-}" ] || [ -n "${SSH_CONNECTION:-}" ]; then
+        echo "ssh"
+    elif [ -n "${DISPLAY:-}" ]; then
+        echo "gui"
+    else
+        echo "terminal"
+    fi
 }
-
-# Set up TTY for better terminal binding
-setup_tty
-ENV_TYPE=$(detect_environment)
-log_debug "Environment type: $ENV_TYPE"
 
 # Enhanced pinentry selection based on environment
 select_pinentry() {
@@ -209,59 +180,76 @@ select_pinentry() {
   return 1
 }
 
-# Try to find appropriate pinentry
-PINENTRY_CMD=$(select_pinentry)
-if [ $? -eq 0 ] && [ -n "$PINENTRY_CMD" ]; then
-  log_debug "Final pinentry selection: $PINENTRY_CMD"
-  # Execute with proper TTY binding
-  exec "$PINENTRY_CMD" "$@"
-fi
+# Try absolute path fallbacks
+try_fallback_paths() {
+    for pinentry_path in \
+        "/opt/local/bin/pinentry-curses" \
+        "/opt/local/bin/pinentry-gtk2" \
+        "/opt/local/bin/pinentry-mac" \
+        "/usr/local/bin/pinentry-curses" \
+        "/usr/local/bin/pinentry-mac" \
+        "/usr/bin/pinentry-curses" \
+        "/usr/bin/pinentry-gtk-2"; do
+        
+        if [ -x "$pinentry_path" ]; then
+            log_debug "Found pinentry at absolute path: $pinentry_path"
+            echo "$pinentry_path"
+            return 0
+        fi
+    done
+    return 1
+}
 
-# MacPorts and absolute path fallbacks
-log_debug "Trying MacPorts and absolute path fallbacks"
-for pinentry_path in \
-  /opt/local/bin/pinentry-curses \
-  /opt/local/bin/pinentry-gtk2 \
-  /opt/local/bin/pinentry-mac \
-  /usr/local/bin/pinentry-curses \
-  /usr/local/bin/pinentry-mac \
-  /usr/bin/pinentry-curses \
-  /usr/bin/pinentry-gtk-2; do
-  
-  if [ -x "$pinentry_path" ]; then
-    log_debug "Found pinentry at absolute path: $pinentry_path"
-    exec "$pinentry_path" "$@"
-  fi
-done
+# Error handling with installation guidance
+handle_error() {
+    local env_type="$1"
+    log_debug "FATAL: No pinentry program found anywhere"
+    
+    cat >&2 << EOF
+ERROR: No usable pinentry program found
 
-# Final error with enhanced debugging
-log_debug "FATAL: No pinentry program found anywhere"
-log_debug "Environment debug info:"
-log_debug "  TERM=$TERM"
-log_debug "  DISPLAY=${DISPLAY:-unset}"
-log_debug "  SSH_TTY=${SSH_TTY:-unset}"
-log_debug "  GPG_TTY=${GPG_TTY:-unset}"
-log_debug "  PATH=$PATH"
+Please install a pinentry program:
+  macOS:         sudo port install pinentry-curses
+  Ubuntu/Debian: sudo apt-get install pinentry-curses
+  CentOS/RHEL:   sudo yum install pinentry-curses
+  Alpine:        sudo apk add pinentry-curses
 
-echo "ERROR: No usable pinentry program found" >&2
-echo "Please install a pinentry program:" >&2
-echo "" >&2
-echo "For servers (headless/terminal):" >&2
-echo "  Ubuntu/Debian: sudo apt-get install pinentry-curses" >&2
-echo "  CentOS/RHEL:   sudo yum install pinentry-curses" >&2
-echo "  Alpine:        sudo apk add pinentry-curses" >&2
-echo "  macOS:         sudo port install pinentry-curses" >&2
-echo "" >&2
-echo "For desktop environments:" >&2
-echo "  macOS:         sudo port install pinentry-mac" >&2
-echo "  Linux GUI:     sudo apt-get install pinentry-gtk2" >&2
-echo "" >&2
-echo "Environment info for debugging:" >&2
-echo "  Environment type: $ENV_TYPE" >&2
-echo "  TERM=$TERM" >&2
-echo "  DISPLAY=${DISPLAY:-unset}" >&2
-echo "  SSH_TTY=${SSH_TTY:-unset}" >&2
-echo "  GPG_TTY=${GPG_TTY:-unset}" >&2
-echo "  Current TTY: $(tty 2>/dev/null || echo 'none')" >&2
-echo "  Check ~/.logs/pinentry.log for detailed debugging" >&2
-exit 1
+Environment: $env_type
+Check ~/.logs/pinentry.log for detailed debugging
+EOF
+    exit 1
+}
+
+# Main execution function
+main() {
+    # Handle help option
+    case "${1:-}" in
+        -h|--help) usage ;;
+    esac
+    
+    # Initialize logging and environment
+    setup_logging
+    setup_tty
+    
+    local env_type
+    env_type=$(detect_environment)
+    log_debug "Starting with args: $*"
+    log_debug "Environment type: $env_type"
+    
+    # Try to find pinentry
+    local pinentry_cmd
+    ENV_TYPE="$env_type" # Make available to select_pinentry
+    
+    if pinentry_cmd=$(select_pinentry); then
+        log_debug "Selected pinentry: $pinentry_cmd"
+        exec "$pinentry_cmd" "$@"
+    elif pinentry_cmd=$(try_fallback_paths); then
+        log_debug "Using fallback pinentry: $pinentry_cmd"
+        exec "$pinentry_cmd" "$@"
+    else
+        handle_error "$env_type"
+    fi
+}
+
+# Execute main function
+main "$@"

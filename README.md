@@ -296,6 +296,18 @@ ssh-keygen-secure                     # Generate Ed25519 key
 ssh-keygen-secure -t rsa -b 4096      # Generate RSA key
 ```
 
+### Cross-Platform Timeout (`timeout`)
+
+Optional timeout utility providing consistent command timeouts across platforms.
+
+```bash
+timeout 30 ping google.com            # Network operations
+timeout 5 curl -s api.example.tld     # HTTP requests
+timeout 10 ssh user@server.tld        # Remote connections
+```
+
+See [docs/timeout-script.md](docs/timeout-script.md) for detailed implementation, compatibility notes, and installation instructions.
+
 ### Email Forwarding
 
 Simple email forwarding setup:

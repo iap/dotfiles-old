@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 # Cross-platform timeout implementation
 # Works on macOS (BSD) and Linux (GNU) without external dependencies
 #
 # Timestamp: 2025-01-13T20:07Z Version: 1.0.0
 
-set -euo pipefail
+set -eu
 
 # Configuration
 SCRIPT_NAME="$(basename "$0")"
@@ -29,28 +29,41 @@ EOF
 # Validate duration format
 validate_duration() {
     local duration="$1"
-    if ! [[ "$duration" =~ ^[0-9]+$ ]]; then
-        echo "Error: Invalid duration: $duration" >&2
-        exit 1
-    fi
+    case "$duration" in
+        ''|*[!0-9]*)
+            echo "Error: Invalid duration: $duration" >&2
+            exit 1
+            ;;
+    esac
 }
 
-# Detect available timeout command
+# Detect available timeout command (excluding our own script)
 detect_timeout_cmd() {
+    # Check for gtimeout first (GNU coreutils via MacPorts)
     if command -v gtimeout >/dev/null 2>&1; then
         echo "gtimeout"
-    elif command -v timeout >/dev/null 2>&1; then
-        echo "timeout"
-    else
-        echo ""
+        return
     fi
+    
+    # Check for system timeout, but exclude our own script
+    local timeout_path
+    timeout_path="$(command -v timeout 2>/dev/null || true)"
+    
+    if [ -n "$timeout_path" ] && [ "$timeout_path" != "$(realpath "$0" 2>/dev/null || echo "$0")" ]; then
+        # Found a timeout that's not our script
+        echo "timeout"
+        return
+    fi
+    
+    # No external timeout found
+    echo ""
 }
 
 # Execute with timeout using Perl fallback
 exec_perl_timeout() {
     local duration="$1"
     shift
-    exec perl -e "alarm $duration; exec @ARGV" "$@"
+    exec perl -e "alarm $duration; exec @ARGV" -- "$@"
 }
 
 # Main execution function
