@@ -16,11 +16,14 @@ ENV_DIR := $(CONFIG_DIR)/env.d # Environment configuration
 BACKUP_DIR := $(HOME)/.backup # Backup storage (secure: 700)
 LOGS_DIR := $(HOME)/.logs # System logs (secure: 700)
 CACHE_DIR := $(HOME)/.cache # Temporary cache data
+VIM_CACHE_DIR := $(CACHE_DIR)/vim # Vim-specific cache directories
 LOCAL_DIR := $(HOME)/.local # XDG local directory
 GNUPG_DIR := $(HOME)/.gnupg # GPG configuration (secure: 700)
 SSH_DIR := $(HOME)/.ssh # SSH configuration (secure: 700)
 BIN_DIR := $(HOME)/bin # User scripts and utilities
-VIM_CACHE_DIR := $(CACHE_DIR)/vim # Vim-specific cache directories
+
+# Core dotfiles to link - centralized for maintainability
+CORE_DOTFILES := zshrc bashrc profile vimrc gitconfig gitignore_global hushlogin
 
 # Error handling function for critical operations
 define check_result
@@ -33,7 +36,7 @@ endef
 .PHONY: bootstrap link-dotfiles setup-templates check-shell-defaults
 
 # Full environment setup - corrected dependency order
-bootstrap: validate-prerequisites link-dotfiles setup-templates check-shell-defaults validate-permissions validate clean-cache auto-cleanup
+bootstrap: validate-prerequisites link-dotfiles setup-templates check-shell-defaults validate-permissions validate clean-cache
 	@echo "Dotfiles environment setup complete"
 	@echo "Please restart your shell or run: source ~/.zshrc"
 	@echo ""
@@ -144,28 +147,8 @@ else
 	@chmod 600 "$(SSH_DIR)/config" "$(SSH_DIR)/known_hosts" "$(SSH_DIR)/known_hosts_local" || { echo "[ERROR] Failed to set SSH file permissions"; exit 1; }
 	@echo "[INFO] SSH configuration linked successfully"
 endif
-	@echo "Linking bin scripts with proper permissions..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would set script permissions: chmod 755 $(PWD)/bin/pinentry-* $(PWD)/bin/ssh-keygen-secure $(PWD)/bin/gpg-setup $(PWD)/bin/git-provider $(PWD)/bin/gpg-ssh"
-	@echo "[DRY-RUN] Would create bin symlinks:"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/pinentry-fallback $(HOME)/bin/pinentry-fallback"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/ssh-keygen-secure $(HOME)/bin/ssh-keygen-secure"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/git-provider $(HOME)/bin/git-provider"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/gpg-setup $(HOME)/bin/gpg-setup"
-	@echo "[DRY-RUN]   ln -sf $(PWD)/bin/gpg-ssh $(HOME)/bin/gpg-ssh"
-else
-	@# Ensure source scripts are executable
-	@chmod 755 "$(PWD)/bin/pinentry-"* "$(PWD)/bin/ssh-keygen-secure" "$(PWD)/bin/gpg-setup" "$(PWD)/bin/git-provider" "$(PWD)/bin/gpg-ssh" 2>/dev/null || true
-	@# Create symlinks with controlled umask for security
-	@OLD_UMASK=$$(umask); \
-	umask 066; \
-	ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"; \
-	ln -sf "$(PWD)/bin/ssh-keygen-secure" "$(HOME)/bin/ssh-keygen-secure"; \
-	ln -sf "$(PWD)/bin/git-provider" "$(HOME)/bin/git-provider"; \
-	ln -sf "$(PWD)/bin/gpg-setup" "$(HOME)/bin/gpg-setup"; \
-	ln -sf "$(PWD)/bin/gpg-ssh" "$(HOME)/bin/gpg-ssh"; \
-	umask $$OLD_UMASK
-endif
+	@echo "[INFO] Scripts remain in .dotfiles/bin/ for security (not linked to ~/bin)"
+	@echo "[INFO] To use scripts system-wide, manually copy desired scripts to ~/bin/"
 	@echo "Dotfiles linked successfully"
 
 # Setup local configuration templates

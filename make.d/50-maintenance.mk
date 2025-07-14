@@ -1,7 +1,7 @@
 # Maintenance and cleanup operations
 # Part of modular Makefile system
 
-.PHONY: clean-cache backup auto-cleanup
+.PHONY: clean-cache backup maintenance
 
 # Default to dry-run mode for safety
 DRY_RUN ?= 1
@@ -43,19 +43,8 @@ else
 	@echo "Backup created in $(BACKUP_DIR)/"
 endif
 
-# Auto-cleanup old logs and backups (per rules: 7+ days)
-auto-cleanup:
-	@echo "Cleaning old logs and backups (7+ days)..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would find and remove old logs:"
-	@find "$(LOG_DIR)" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-	@echo "[DRY-RUN] Would find and remove old backup logs:"
-	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-	@echo "[DRY-RUN] Would find and remove old SSH control sockets:"
-	@find "$(HOME)/.ssh/control" -type s -mtime +1 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-else
-	@find "$(LOG_DIR)" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
-	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
-	@find "$(HOME)/.ssh/control" -type s -mtime +1 -exec rm -f {} \; 2>/dev/null || true
-endif
-	@echo "Auto-cleanup complete"
+# Comprehensive maintenance (cleanup, duplicates, permissions, disk check)
+maintenance:
+	@echo "Running comprehensive maintenance..."
+	@$(PWD)/bin/maintenance
+	@echo "Maintenance completed. Check logs: $(HOME)/.logs/maintenance-cron.log"

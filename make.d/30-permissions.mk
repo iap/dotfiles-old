@@ -47,10 +47,4 @@ ifdef DRY_RUN
 else
 	@chmod 755 $(PINENTRY_SCRIPTS) 2>/dev/null || true
 endif
-	@echo "Creating symlinks with proper permissions..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would create symlink: $(HOME)/bin/pinentry-fallback"
-else
-	@ln -sf "$(PWD)/bin/pinentry-fallback" "$(HOME)/bin/pinentry-fallback"
-endif
 	@echo "Permission fixes complete"

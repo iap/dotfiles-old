@@ -1,0 +1,209 @@
+#!/bin/sh
+# Comprehensive maintenance script for cron job usage
+# Version: 1.0.0 - Initial implementation with auto-cleanup and duplicate handling
+# Timestamp: 2025-07-13T22:51Z
+
+set -eu
+
+# Configuration
+SCRIPT_NAME="$(basename "$0")"
+LOG_FILE="$HOME/.logs/maintenance-cron.log"
+CACHE_DIR="$HOME/.cache"
+BACKUP_DIR="$HOME/.backup"
+LOG_DIR="$HOME/.logs"
+SSH_CONTROL_DIR="$HOME/.ssh/control"
+
+# Dry run mode (set by environment variable or command line)
+DRY_RUN=${DRY_RUN:-0}
+if [ "${1:-}" = "--dry-run" ] || [ "${1:-}" = "-n" ]; then
+    DRY_RUN=1
+fi
+
+# Setup logging with directory detection
+setup_logging() {
+    local logs_dir="$HOME/.logs"
+    if [ ! -d "$logs_dir" ]; then
+        mkdir -p "$logs_dir" 2>/dev/null || {
+            LOG_FILE="/tmp/maintenance-cron-$USER.log"
+            return 0
+        }
+    fi
+}
+
+# Logging function
+log() {
+    local message="[$(date '+%Y-%m-%d %H:%M:%S')] $SCRIPT_NAME: $*"
+    echo "$message" >> "$LOG_FILE" 2>/dev/null || true
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "$message"
+    fi
+}
+
+# Check for duplicate directories with spaces
+find_duplicates() {
+    find "$HOME" -maxdepth 1 -type d -name "* " 2>/dev/null
+}
+
+# Handle duplicate directories
+handle_duplicates() {
+    log "Starting duplicate directory check"
+    
+    duplicates=$(find_duplicates)
+    if [ -n "$duplicates" ]; then
+        log "Found duplicate directories: $duplicates"
+        echo "$duplicates" | while IFS= read -r dir; do
+            if [ -d "$dir" ]; then
+                base_dir="${dir%% }"
+                log "Processing duplicate: $dir -> $base_dir"
+                
+                if [ "$DRY_RUN" -eq 1 ]; then
+                    log "[DRY-RUN] Would merge contents and remove: $dir"
+                else
+                    # Merge contents if base directory exists
+                    if [ -d "$base_dir" ]; then
+                        # Move contents safely
+                        for item in "$dir"/*; do
+                            if [ -e "$item" ]; then
+                                item_name=$(basename "$item")
+                                if [ ! -e "$base_dir/$item_name" ]; then
+                                    mv "$item" "$base_dir/" 2>/dev/null || log "Failed to move $item"
+                                else
+                                    log "Conflict: $item_name already exists in $base_dir"
+                                fi
+                            fi
+                        done 2>/dev/null
+                    else
+                        # Rename duplicate to remove space
+                        mv "$dir" "$base_dir" 2>/dev/null || log "Failed to rename $dir"
+                    fi
+                    
+                    # Remove empty duplicate directory
+                    rmdir "$dir" 2>/dev/null || rm -rf "$dir" 2>/dev/null || log "Failed to remove $dir"
+                    log "Removed duplicate directory: $dir"
+                fi
+            fi
+        done
+        log "Duplicate directory handling complete"
+    else
+        log "No duplicate directories found"
+    fi
+}
+
+# Auto-cleanup old files (7+ days as per rules)
+auto_cleanup() {
+    log "Starting auto-cleanup (7+ days)"
+    
+    # Clean old logs
+    if [ -d "$LOG_DIR" ]; then
+        old_logs=$(find "$LOG_DIR" -type f -mtime +7 2>/dev/null | wc -l)
+        if [ "$old_logs" -gt 0 ]; then
+            find "$LOG_DIR" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
+            log "Removed $old_logs old log files"
+        else
+            log "No old log files to remove"
+        fi
+    fi
+    
+    # Clean old backup logs
+    if [ -d "$BACKUP_DIR/logs" ]; then
+        old_backup_logs=$(find "$BACKUP_DIR/logs" -type f -mtime +7 2>/dev/null | wc -l)
+        if [ "$old_backup_logs" -gt 0 ]; then
+            find "$BACKUP_DIR/logs" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
+            log "Removed $old_backup_logs old backup log files"
+        else
+            log "No old backup log files to remove"
+        fi
+    fi
+    
+    # Clean old SSH control sockets (1+ day)
+    if [ -d "$SSH_CONTROL_DIR" ]; then
+        old_sockets=$(find "$SSH_CONTROL_DIR" -type s -mtime +1 2>/dev/null | wc -l)
+        if [ "$old_sockets" -gt 0 ]; then
+            find "$SSH_CONTROL_DIR" -type s -mtime +1 -exec rm -f {} \; 2>/dev/null || true
+            log "Removed $old_sockets old SSH control sockets"
+        else
+            log "No old SSH control sockets to remove"
+        fi
+    fi
+    
+    # Clean temporary files older than 3 days
+    if [ -d "/tmp" ]; then
+        old_temp=$(find "/tmp" -user "$USER" -type f -mtime +3 2>/dev/null | wc -l)
+        if [ "$old_temp" -gt 0 ]; then
+            find "/tmp" -user "$USER" -type f -mtime +3 -exec rm -f {} \; 2>/dev/null || true
+            log "Removed $old_temp old temporary files"
+        fi
+    fi
+    
+    log "Auto-cleanup complete"
+}
+
+# Validate and fix directory permissions
+fix_permissions() {
+    log "Starting permission validation and fixes"
+    
+    # Home directory should be 711
+    current_home_perm=$(stat -f "%p" "$HOME" 2>/dev/null | tail -c 4)
+    if [ "$current_home_perm" != "711" ]; then
+        chmod 711 "$HOME" 2>/dev/null || log "Failed to fix home directory permissions"
+        log "Fixed home directory permissions: $current_home_perm -> 711"
+    fi
+    
+    # Sensitive directories should be 700
+    for dir in .gnupg .ssh .backup .cache .logs; do
+        dir_path="$HOME/$dir"
+        if [ -d "$dir_path" ]; then
+            current_perm=$(stat -f "%p" "$dir_path" 2>/dev/null | tail -c 4)
+            if [ "$current_perm" != "700" ]; then
+                chmod 700 "$dir_path" 2>/dev/null || log "Failed to fix $dir permissions"
+                log "Fixed $dir permissions: $current_perm -> 700"
+            fi
+        fi
+    done
+    
+    # Sensitive files should be 600
+    for file in .gitconfig.local .profile.local .forward.local; do
+        file_path="$HOME/$file"
+        if [ -f "$file_path" ]; then
+            current_perm=$(stat -f "%p" "$file_path" 2>/dev/null | tail -c 4)
+            if [ "$current_perm" != "600" ]; then
+                chmod 600 "$file_path" 2>/dev/null || log "Failed to fix $file permissions"
+                log "Fixed $file permissions: $current_perm -> 600"
+            fi
+        fi
+    done
+    
+    log "Permission validation complete"
+}
+
+# Check disk space and warn if low
+check_disk_space() {
+    log "Checking disk space"
+    
+    # Get disk usage for home directory
+    home_usage=$(df -h "$HOME" | tail -n 1 | awk '{print $5}' | sed 's/%//')
+    
+    if [ "$home_usage" -gt 90 ]; then
+        log "WARNING: Home directory disk usage is ${home_usage}% (>90%)"
+    elif [ "$home_usage" -gt 80 ]; then
+        log "NOTICE: Home directory disk usage is ${home_usage}% (>80%)"
+    else
+        log "Disk usage normal: ${home_usage}%"
+    fi
+}
+
+# Main maintenance function
+main() {
+    setup_logging
+    log "Starting maintenance script"
+    
+    handle_duplicates
+    auto_cleanup
+    fix_permissions
+    check_disk_space
+    
+    log "Maintenance script completed successfully"
+}
+
+# Execute main function
+main "$@"
