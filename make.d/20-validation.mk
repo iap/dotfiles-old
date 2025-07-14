@@ -116,25 +116,15 @@ validate-permissions:
 	@echo "Checking pinentry script permissions..."
 	@if [ -f "$(HOME)/bin/pinentry-fallback" ]; then \
 		if [ -x "$(HOME)/bin/pinentry-fallback" ]; then \
-			echo "[OK] pinentry-fallback is executable"; \
+			echo "[OK] pinentry-fallback is executable in ~/bin/"; \
 		else \
-			echo "[ERROR] pinentry-fallback is not executable"; \
+			echo "[ERROR] pinentry-fallback is not executable in ~/bin/"; \
 		fi; \
+	elif [ -f "$(PWD)/bin/pinentry-fallback" ]; then \
+		echo "[INFO] pinentry-fallback found in .dotfiles/bin/ but not copied to ~/bin/"; \
+		echo "[INFO] Run 'make bootstrap' to copy essential scripts"; \
 	else \
-		echo "[WARNING] pinentry-fallback not found"; \
-	fi
-	@echo "Checking symlink permissions..."
-	@if [ -L "$(HOME)/bin/pinentry-fallback" ]; then \
-		if [ "$$(uname)" = "Darwin" ]; then \
-			SYM_PERM=$$(stat -f '%p' $(HOME)/bin/pinentry-fallback 2>/dev/null | tail -c 4); \
-		else \
-			SYM_PERM=$$(stat -c '%a' $(HOME)/bin/pinentry-fallback 2>/dev/null); \
-		fi; \
-		if [ "$$SYM_PERM" = "711" ]; then \
-			echo "[OK] pinentry-fallback symlink permissions: $$SYM_PERM"; \
-		else \
-			echo "[WARNING] pinentry-fallback symlink permissions: $$SYM_PERM (should be 711)"; \
-		fi;\
+		echo "[WARNING] pinentry-fallback not found in .dotfiles/bin/ or ~/bin/"; \
 	fi
 	@echo "Permission validation complete"
 

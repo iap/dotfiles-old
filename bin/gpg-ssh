@@ -1,43 +1,60 @@
 #!/bin/sh
 # GPG SSH key management script
 # Manages SSH authentication using GPG agent
+# Version: 2.0 - Restructured with modular functions
+# Timestamp: 2025-01-13T20:07Z
 
-set -e
+set -eu
 
+# Configuration
+SCRIPT_NAME="$(basename "$0")"
+LOG_FILE="$HOME/.logs/gpg-ssh.log"
+
+# Display usage information
 usage() {
-  cat << EOF
-Usage: $(basename "$0") [command] [options]
+    cat << EOF
+Usage: $SCRIPT_NAME [command] [options]
 
 Commands:
-  setup           - Configure GPG agent for SSH authentication
-  add-key         - Add GPG key to SSH agent
-  list-keys       - List GPG keys suitable for SSH
-  ssh-keys        - Show SSH public keys from GPG
-  test            - Test GPG agent SSH functionality
-  status          - Show GPG agent and SSH status
-  restart-agent   - Restart GPG agent
+  setup           Configure GPG agent for SSH authentication
+  add-key         Add GPG key to SSH agent
+  list-keys       List GPG keys suitable for SSH
+  ssh-keys        Show SSH public keys from GPG
+  test            Test GPG agent SSH functionality
+  status          Show GPG agent and SSH status
+  restart-agent   Restart GPG agent
 
 Options:
   -k KEYID        GPG key ID to use
   -f              Force operation without confirmation
-  -h, --help      Show this help message and exit
+  -h, --help      Show this help message
 
 Examples:
-  $(basename "$0") setup          # Enable GPG agent SSH support
-  $(basename "$0") list-keys      # Show available GPG keys
-  $(basename "$0") add-key -k KEYID  # Add specific key to SSH agent
-  $(basename "$0") ssh-keys       # Export SSH public keys
-  $(basename "$0") test           # Test SSH functionality
+  $SCRIPT_NAME setup
+  $SCRIPT_NAME list-keys
+  $SCRIPT_NAME add-key -k KEYID
 
 Prerequisites:
   - GPG with authentication-capable key
   - gpg-agent with enable-ssh-support
-  - SSH client that supports agent
 EOF
+    exit 0
 }
 
+# Setup logging with directory detection
+setup_logging() {
+    local logs_dir="$HOME/.logs"
+    if [ ! -d "$logs_dir" ]; then
+        mkdir -p "$logs_dir" 2>/dev/null || {
+            LOG_FILE="/tmp/gpg-ssh-$USER.log"
+            return 0
+        }
+    fi
+}
+
+# Logging function
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/gpg-ssh.log"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $SCRIPT_NAME: $*" >> "$LOG_FILE" 2>/dev/null || true
 }
 
 check_gpg() {
@@ -91,41 +108,37 @@ setup_gpg_ssh() {
   echo "GPG agent is now configured for SSH authentication"
 }
 
+# List GPG keys suitable for SSH authentication
 list_gpg_keys() {
-  echo "=== GPG Keys with Authentication Capability ==="
-  echo ""
-  
-  # List secret keys with authentication capability
-  gpg --list-secret-keys --with-keygrip --with-subkey-fingerprints | \
-  awk '
-    BEGIN { in_key = 0; keyid = ""; usage = ""; keygrip = "" }
-    /^sec/ { 
-      in_key = 1
-      keyid = $2
-      usage = ""
-      keygrip = ""
-    }
-    /^ssb/ && in_key {
-      subkey_usage = $2
-      # Extract usage from the key line
-      if (match($0, /\[([SCAE]+)\]/, arr)) {
-        usage = arr[1]
-      }
-    }
-    /Keygrip/ && in_key {
-      keygrip = $3
-    }
-    /^uid/ && in_key {
-      if (usage ~ /A/ || usage ~ /S/) {
-        print "Key ID: " keyid
-        print "Usage: " usage " (A=Authentication, S=Signing, C=Certification, E=Encryption)"
-        print "Keygrip: " keygrip
-        print "UID: " substr($0, 10)
-        print ""
-      }
-    }
-    /^$/ { in_key = 0 }
-  '
+    echo "=== GPG Keys with Authentication Capability ==="
+    echo ""
+    
+    # Simplified approach: use gpg's built-in SSH key listing
+    if ! gpg --list-secret-keys --with-keygrip 2>/dev/null | grep -q "sec\|ssb"; then
+        echo "No GPG keys found. Generate or import keys first."
+        return 1
+    fi
+    
+    # Show keys with authentication capability
+    gpg --list-secret-keys --with-keygrip 2>/dev/null | while IFS= read -r line; do
+        case "$line" in
+            sec*)
+                echo "Key: $line"
+                ;;
+            uid*)
+                echo "User: ${line#uid*}"
+                ;;
+            ssb*)
+                if echo "$line" | grep -q "\[A\]"; then
+                    echo "Subkey: $line (Authentication capable)"
+                fi
+                ;;
+            *Keygrip*)
+                echo "Keygrip: ${line#*Keygrip = }"
+                echo ""
+                ;;
+        esac
+    done
 }
 
 add_ssh_key() {
@@ -269,67 +282,106 @@ restart_agent() {
   echo "GPG agent restarted successfully"
 }
 
-# Parse command line
-COMMAND=""
-KEYID=""
-FORCE=0
+# Parse command line arguments
+parse_arguments() {
+    local command=""
+    local keyid=""
+    local force=0
+    
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            setup|add-key|list-keys|ssh-keys|test|status|restart-agent)
+                command="$1"
+                shift
+                ;;
+            -k)
+                keyid="$2"
+                shift 2
+                ;;
+            -f)
+                force=1
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
+            -*)
+                echo "Unknown option: $1" >&2
+                usage
+                exit 1
+                ;;
+            *)
+                if [ -z "$command" ]; then
+                    command="$1"
+                else
+                    echo "Unknown argument: $1" >&2
+                    usage
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    # Export for other functions to use
+    COMMAND="$command"
+    KEYID="$keyid"
+    FORCE="$force"
+}
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    setup|add-key|list-keys|ssh-keys|test|status|restart-agent)
-      COMMAND="$1"
-      shift
-      ;;
-    -k) KEYID="$2"; shift 2 ;;
-    -f) FORCE=1; shift ;;
-    -h|--help) usage; exit 0 ;;
-    -*) echo "Unknown option: $1" >&2; usage; exit 1 ;;
-    *) 
-      if [ -z "$COMMAND" ]; then
-        COMMAND="$1"
-      else
-        echo "Unknown argument: $1" >&2
-        usage
-        exit 1
-      fi
-      shift
-      ;;
-  esac
-done
+# Execute the requested command
+execute_command() {
+    case "$COMMAND" in
+        setup)
+            setup_gpg_ssh
+            ;;
+        add-key)
+            add_ssh_key "$KEYID" "$FORCE"
+            ;;
+        list-keys)
+            list_gpg_keys
+            ;;
+        ssh-keys)
+            show_ssh_keys
+            ;;
+        test)
+            test_ssh_functionality
+            ;;
+        status)
+            show_status
+            ;;
+        restart-agent)
+            restart_agent
+            ;;
+        ""|--help)
+            usage
+            ;;
+        *)
+            echo "Unknown command: $COMMAND" >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
 
-# Check prerequisites
-check_gpg
-check_gpg_agent
+# Main execution function
+main() {
+    # Handle help option first
+    case "${1:-}" in
+        -h|--help) usage ;;
+    esac
+    
+    # Initialize
+    setup_logging
+    
+    # Check prerequisites
+    check_gpg
+    check_gpg_agent
+    
+    # Parse arguments and execute
+    parse_arguments "$@"
+    execute_command
+}
 
-# Execute command
-case "$COMMAND" in
-  setup)
-    setup_gpg_ssh
-    ;;
-  add-key)
-    add_ssh_key "$KEYID" "$FORCE"
-    ;;
-  list-keys)
-    list_gpg_keys
-    ;;
-  ssh-keys)
-    show_ssh_keys
-    ;;
-  test)
-    test_ssh_functionality
-    ;;
-  status)
-    show_status
-    ;;
-  restart-agent)
-    restart_agent
-    ;;
-  ""|--help)
-    usage
-    ;;
-  *)
-    echo "Unknown command: $COMMAND" >&2
-    usage
-    exit 1
-    ;;
-esac
+# Execute main function
+main "$@"

@@ -1,67 +1,80 @@
 #!/bin/sh
 # Git provider management script
 # Manages dotfiles across multiple Git providers
+# Version: 2.0 - Restructured with modular functions
+# Timestamp: 2025-01-13T20:07Z
 
-set -e
+set -eu
 
-# Default providers configuration
+# Configuration
+SCRIPT_NAME="$(basename "$0")"
+LOG_FILE="$HOME/.logs/git-provider.log"
 PROVIDERS_CONFIG="$HOME/.config/git-providers.conf"
+
 # Resolve script location even if called through symlink
 SCRIPT_PATH="$0"
 if [ -L "$SCRIPT_PATH" ]; then
-  SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH")"
+    SCRIPT_PATH="$(readlink -f "$SCRIPT_PATH")"
 fi
 DOTFILES_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 
+# Display usage information
 usage() {
-  cat << EOF
-Usage: $(basename "$0") [command] [options]
+    cat << EOF
+Usage: $SCRIPT_NAME [command] [options]
 
 Commands:
-  setup           - Configure multiple Git providers
-  add-remote      - Add a new Git provider remote
-  push-all        - Push to all configured providers
-  pull-primary    - Pull from primary provider
-  sync            - Sync across all providers
-  status          - Show status of all remotes
-  list            - List configured providers
-  set-primary     - Set primary provider
+  setup           Configure multiple Git providers
+  add-remote      Add a new Git provider remote
+  push-all        Push to all configured providers
+  pull-primary    Pull from primary provider
+  sync            Sync across all providers
+  status          Show status of all remotes
+  list            List configured providers
+  set-primary     Set primary provider
 
 Options:
   -p PROVIDER     Provider name (github, gitlab, bitbucket, gitea, custom)
   -u URL          Git repository URL
-  -n NAME         Remote name
   -k KEYFILE      SSH key file for this provider
   --primary       Set as primary provider
+  -h, --help      Show this help message
 
 Examples:
-  $(basename "$0") setup
-  $(basename "$0") add-remote -p github -u git@github.com:user/dotfiles.git
-  $(basename "$0") add-remote -p gitlab -u git@gitlab.com:user/dotfiles.git
-  $(basename "$0") push-all
-  $(basename "$0") sync
+  $SCRIPT_NAME setup
+  $SCRIPT_NAME add-remote -p github -u git@github.com:user/dotfiles.git
+  $SCRIPT_NAME push-all
 
 Supported providers:
-  github      - GitHub (github.com)
-  gitlab      - GitLab (gitlab.com)
-  bitbucket   - Bitbucket (bitbucket.org)
-  gitea       - Gitea (self-hosted)
-  codeberg    - Codeberg (codeberg.org)
-  custom      - Custom Git provider
+  github, gitlab, bitbucket, gitea, codeberg, custom
 EOF
+    exit 0
 }
 
+# Setup logging with directory detection
+setup_logging() {
+    local logs_dir="$HOME/.logs"
+    if [ ! -d "$logs_dir" ]; then
+        mkdir -p "$logs_dir" 2>/dev/null || {
+            LOG_FILE="/tmp/git-provider-$USER.log"
+            return 0
+        }
+    fi
+}
+
+# Logging function
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$HOME/.logs/git-provider.log"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $SCRIPT_NAME: $*" >> "$LOG_FILE" 2>/dev/null || true
 }
 
+# Check network connectivity safely
 check_network() {
-  # Test basic connectivity
-  if ping -c 1 1.1.1.1 >/dev/null 2>&1; then
-    return 0
-  else
-    return 1
-  fi
+    if [ "${OFFLINE_MODE:-0}" -eq 1 ]; then
+        return 1
+    fi
+    
+    # Test basic connectivity with timeout fallback
+    ping -c 1 -W 5000 1.1.1.1 >/dev/null 2>&1 || return 1
 }
 
 require_network() {

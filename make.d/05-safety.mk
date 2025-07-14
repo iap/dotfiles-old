@@ -7,11 +7,15 @@ SHELL := /bin/sh
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --no-builtin-variables
 
-# Centralized configuration
+# Centralized configuration  
 TIMEOUT := $(or $(TIMEOUT), 300)
 RETRY_COUNT := $(or $(RETRY_COUNT), 3)
 RETRY_DELAY := $(or $(RETRY_DELAY), 2)
 TIMEOUT_CMD := $(shell command -v timeout || command -v gtimeout || echo "")
+
+# Dry run detection using DRY_RUN variable
+# Provides explicit "[DRY-RUN] Would..." messaging for safe operations
+DRY_RUN_ACTIVE := $(if $(DRY_RUN),1,0)
 
 # Timeout for long-running operations (seconds)
 TIMEOUT := 300

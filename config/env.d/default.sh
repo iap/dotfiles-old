@@ -61,8 +61,42 @@ log_network() {
 }
 
 # Network check function
+retry() {
+  max_attempts="$1"
+  sleep_duration="$2"
+  command="$3"
+  attempt_num=1
+
+  while [ $attempt_num -le $max_attempts ]; do
+    if eval "$command"; then
+      return 0
+    fi
+
+    if [ $attempt_num -eq $max_attempts ]; then
+      log_network "Network check failed after $max_attempts attempts"
+      return 1
+    fi
+
+    log_network "Attempt $attempt_num failed! Trying again in $sleep_duration seconds..."
+    sleep $sleep_duration
+    attempt_num=$((attempt_num + 1))
+  done
+}
+
 check_network() {
-  ping -c 1 1.1.1.1 >/dev/null 2>&1 || return 1
+  if [ "$OFFLINE_MODE" = "1" ]; then
+    log_network "Offline mode enabled. Skipping network checks."
+    return 1
+  fi
+  
+  log_network "Checking network connectivity..."
+  if retry 3 2 "ping -c 1 1.1.1.1 >/dev/null 2>&1"; then
+    log_network "Network connectivity confirmed"
+    return 0
+  else
+    log_network "Network connectivity failed"
+    return 1
+  fi
 }
 # GPG configuration
 # Set GPG TTY for proper pinentry operation

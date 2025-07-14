@@ -1,58 +1,29 @@
 # Maintenance and cleanup operations
-# Part of modular Makefile system
+# Part of modular Makefile system - optimized with common utilities
 
-.PHONY: clean-cache backup auto-cleanup
+.PHONY: clean-cache backup maintenance
 
-# Define common paths
-CACHE_DIR := $(HOME)/.cache
-BACKUP_DIR := $(HOME)/.backup/system
-LOG_DIR := $(HOME)/.logs
-
-# Macro for creating directories
-define create-dir
-	@mkdir -p "$1" && echo "[OK] Created directory: $1" || echo "[ERROR] Failed to create directory: $1"
-endef
+# Note: Common paths and utilities are now in 00-common.mk
+# CACHE_DIR, BACKUP_DIR, LOGS_DIR, and macros are defined there
 
 # Clean cache directory
 clean-cache:
-	@echo "Cleaning cache directory..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would remove cache: rm -rf $(CACHE_DIR)"
-	@echo "[DRY-RUN] Would recreate cache: mkdir -p $(CACHE_DIR)"
-else
-	@rm -rf "$(CACHE_DIR)"
-	$(call create-dir,$(CACHE_DIR))
-endif
-	@echo "Cache cleaned"
+	$(call show_progress,Cleaning cache directory...)
+	$(call dry_run_or_execute,rm -rf "$(CACHE_DIR)")
+	$(call create_directory_safe,$(CACHE_DIR))
+	$(call show_progress,Cache cleaned)
 
 # Backup essential files
 backup:
-	@echo "Creating backup..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would create backup directory: mkdir -p $(BACKUP_DIR)"
-	@echo "[DRY-RUN] Would copy dotfiles: cp -r $(PWD) $(BACKUP_DIR)/dotfiles"
-	@test -f "$(HOME)/.zsh_history" && echo "[DRY-RUN] Would copy zsh history: cp $(HOME)/.zsh_history $(BACKUP_DIR)/" || true
-	@echo "[DRY-RUN] Backup would be created in $(BACKUP_DIR)/"
-else
-	$(call create-dir,$(BACKUP_DIR))
-	@cp -r "$(PWD)" "$(BACKUP_DIR)/dotfiles" 2>/dev/null || true
-	@test -f "$(HOME)/.zsh_history" && cp "$(HOME)/.zsh_history" "$(BACKUP_DIR)/" || true
-	@echo "Backup created in $(BACKUP_DIR)/"
-endif
+	$(call show_progress,Creating backup...)
+	$(call create_directory_safe,$(BACKUP_DIR)/system)
+	$(call dry_run_or_execute,cp -r "$(PWD)" "$(BACKUP_DIR)/system/dotfiles" 2>/dev/null || true)
+	$(call dry_run_or_execute,test -f "$(HOME)/.zsh_history" && cp "$(HOME)/.zsh_history" "$(BACKUP_DIR)/system/" || true)
+	$(call show_progress,Backup created in $(BACKUP_DIR)/system/)
 
-# Auto-cleanup old logs and backups (per rules: 7+ days)
-auto-cleanup:
-	@echo "Cleaning old logs and backups (7+ days)..."
-ifdef DRY_RUN
-	@echo "[DRY-RUN] Would find and remove old logs:"
-	@find "$(LOG_DIR)" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-	@echo "[DRY-RUN] Would find and remove old backup logs:"
-	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-	@echo "[DRY-RUN] Would find and remove old SSH control sockets:"
-	@find "$(HOME)/.ssh/control" -type s -mtime +1 2>/dev/null | head -10 | sed 's/^/[DRY-RUN]   Would remove: /' || true
-else
-	@find "$(LOG_DIR)" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
-	@find "$(BACKUP_DIR)/logs" -type f -mtime +7 -exec rm -f {} \; 2>/dev/null || true
-	@find "$(HOME)/.ssh/control" -type s -mtime +1 -exec rm -f {} \; 2>/dev/null || true
-endif
-	@echo "Auto-cleanup complete"
+# Comprehensive maintenance (cleanup, duplicates, permissions, disk check)
+maintenance:
+	$(call show_progress,Running comprehensive maintenance...)
+	$(call log_action,Starting maintenance via Makefile)
+	@$(PROJECT_BIN_DIR)/maintenance
+	$(call show_progress,Maintenance completed. Check logs: $(LOGS_DIR)/maintenance-cron.log)
